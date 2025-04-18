@@ -1,7 +1,8 @@
 <?php
 return array(
-	'_root_'  => 'home/index',  // The default route
-	'_404_'   => 'welcome/404',    // The main 404 route
-	
-	'hello(/:name)?' => array('welcome/hello', 'name' => 'hello'),
+    '_root_'  => 'home/index',
+    '_404_'   => 'welcome/404',
+    'hello(/:name)?' => array('welcome/hello', 'name' => 'hello'),
+    'songs' => 'songs/index',
+    'api/songs/upload' => 'api/songs/upload',
 );

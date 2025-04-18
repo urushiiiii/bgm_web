@@ -57,5 +57,13 @@ RUN mkdir /var/www/html/my_fuel_project && \
 
 EXPOSE 80
 
+# アップロード用ディレクトリを作成し、パーミッションを設定
+# パスは docker-compose.yml の volumes 設定と Controller の $config['path'] に合わせる
+RUN mkdir -p /var/www/html/my_fuel_project/public/assets/uploads/songs && \
+    # chown で所有者とグループをWebサーバー実行ユーザー(多くは www-data)に変更
+    chown -R www-data:www-data /var/www/html/my_fuel_project/public/assets/uploads && \
+    # chmod で権限を設定 (例: 775 = 所有者・グループに書き込み権限付与)
+    chmod -R 775 /var/www/html/my_fuel_project/public/assets/uploads
+
 # Apacheとcronをフォアグラウンドで起動
 CMD ["apache2-foreground"]

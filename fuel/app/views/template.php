@@ -28,10 +28,6 @@
 
     <header>
         <h1><a href="<?php echo Uri::base(false); ?>">BGMアプリ</a></h1>
-        <?php // ↓ Knockout.jsでメッセージを表示する例 ↓ ?>
-        <p><strong data-bind="text: welcomeMessage"></strong></p>
-        <p>現在時刻: <span data-bind="text: currentDateTime"></span></p>
-        <?php // ↑ ここまで追加例 ↑ ?>
         <nav>
             <ul>
                 <li><a href="<?php echo Uri::create('home/index'); ?>">ホーム</a></li> <?php // 全体ページへのリンク ?>
