@@ -12,7 +12,7 @@
             </tr>
         </thread>
         <tbody>
-            <?php foreach ($songs as $song):　?>
+            <?php foreach ($songs as $song):?>
                 <tr>
                     <td><?php echo e($song['id']); ?></td>
                     <td><?php echo e($song['name']); ?></td>

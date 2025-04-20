@@ -12,12 +12,12 @@ document.addEventListener("DOMContentLoaded", function () {
   ko.applyBindings(new AppViewModel());
 
   //楽曲追加ボタンの処理
-  const addSongBottun = document.getElementById("add-song-button");
+  const addSongBotton = document.getElementById("add-song-button");
   const songFileInput = document.getElementById("song-file-input");
   const uploadStatusDiv = document.getElementById("upload-status");
   //楽曲追加ボタンが押されたらファイル選択ダイアログを開く
-  if (addSongBottun && songFileInput) {
-    addSongBottun.addEventListener("click", function () {
+  if (addSongBotton && songFileInput) {
+    addSongBotton.addEventListener("click", function () {
       songFileInput.click();
     });
   }

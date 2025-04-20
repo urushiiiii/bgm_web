@@ -12,6 +12,8 @@
 
 return array(
 
+	// fuel/app/config/config.php
+	'log_threshold' => Fuel::L_DEBUG, // ← DEBUGレベルも出力するように変更
 	/**
 	 * base_url - The base URL of the application.
 	 * MUST contain a trailing slash (/)
