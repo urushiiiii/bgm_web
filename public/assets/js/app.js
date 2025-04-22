@@ -102,3 +102,129 @@ document.addEventListener("DOMContentLoaded", function () {
       });
   }
 });
+
+document.addEventListener("DOMContentLoaded", function () {
+  const createPlaylistButton = document.getElementById(
+    "create-playlist-button"
+  );
+  const createPlaylistForm = document.getElementById("create-playlist-form");
+
+  if (createPlaylistButton && createPlaylistForm) {
+    createPlaylistButton.addEventListener("click", function () {
+      // フォームの表示状態を切り替える (display: none <-> display: block など)
+      if (
+        createPlaylistForm.style.display === "none" ||
+        createPlaylistForm.style.display === ""
+      ) {
+        createPlaylistForm.style.display = "block"; // 表示する
+      } else {
+        createPlaylistForm.style.display = "none"; // 非表示にする
+      }
+    });
+  }
+
+  // --- ↓ プレイリスト作成実行の処理を追加 ↓ ---
+  const submitPlaylistButton = document.getElementById(
+    "submit-playlist-button"
+  );
+  const newPlaylistNameInput = document.getElementById("new-playlist-name");
+  const createPlaylistStatusSpan = document.getElementById(
+    "create-playlist-status"
+  );
+  const playlistListUl = document.getElementById("playlist-list"); // ★ 一覧表示の<ul>要素
+
+  if (
+    submitPlaylistButton &&
+    newPlaylistNameInput &&
+    createPlaylistStatusSpan &&
+    playlistListUl
+  ) {
+    submitPlaylistButton.addEventListener("click", function () {
+      const playlistName = newPlaylistNameInput.value.trim(); // 入力値を取得し、前後の空白を削除
+
+      if (playlistName === "") {
+        createPlaylistStatusSpan.textContent =
+          "プレイリスト名を入力してください。";
+        createPlaylistStatusSpan.style.color = "red";
+        return; // 名前が空なら何もしない
+      }
+
+      createPlaylistStatusSpan.textContent = "作成中...";
+      createPlaylistStatusSpan.style.color = "black";
+      submitPlaylistButton.disabled = true; // 連打防止
+
+      // FormDataオブジェクトを作成し、名前を追加
+      const formData = new FormData();
+      formData.append("name", playlistName);
+
+      // fetch APIでプレイリスト作成APIにPOSTリクエストを送信
+      fetch("/api/playlists/create", {
+        method: "POST",
+        body: formData,
+      })
+        .then((response) => {
+          if (!response.ok) {
+            // エラーレスポンスの場合
+            return response
+              .json()
+              .catch(() => {
+                throw new Error(`HTTP error! status: ${response.status}`);
+              })
+              .then((errData) => {
+                throw { status: response.status, data: errData };
+              });
+          }
+          return response.json(); // 成功レスポンスをJSONで取得
+        })
+        .then((data) => {
+          console.log("プレイリスト作成応答:", data);
+          if (data.success) {
+            createPlaylistStatusSpan.textContent = data.message;
+            createPlaylistStatusSpan.style.color = "green";
+            newPlaylistNameInput.value = ""; // 入力欄をクリア
+            createPlaylistForm.style.display = "none"; // フォームを隠す
+
+            // 新しいプレイリスト情報をリストに追加する
+            const newListItem = document.createElement("li");
+            const newLink = document.createElement("a");
+            newLink.href = `/playlist/view/${data.playlist.id}`; // サーバーから返されたIDを使う
+            newLink.textContent = data.playlist.name; // サーバーから返された名前を使う
+            const dateSpan = document.createElement("span");
+            dateSpan.textContent = ` (作成日: ${new Date().toLocaleDateString()})`; // 仮の日付表示
+            newListItem.appendChild(newLink);
+            newListItem.appendChild(dateSpan);
+
+            // 「まだありません」の表示を削除 (もしあれば)
+            const noPlaylistLi = playlistListUl.querySelector("li:only-child");
+            if (
+              noPlaylistLi &&
+              noPlaylistLi.textContent.includes("まだありません")
+            ) {
+              playlistListUl.innerHTML = ""; // 中身を一旦空にする
+            }
+
+            playlistListUl.appendChild(newListItem); // 新しい項目をリストに追加
+          } else {
+            // 作成失敗 (名前重複など)
+            createPlaylistStatusSpan.textContent = `エラー: ${data.message}`;
+            createPlaylistStatusSpan.style.color = "red";
+          }
+        })
+        .catch((error) => {
+          console.error("プレイリスト作成エラー:", error);
+          let errorMessage = "作成中にエラーが発生しました。";
+          if (error.data && error.data.message) {
+            errorMessage = error.data.message;
+          } else if (error.message) {
+            errorMessage = error.message;
+          }
+          createPlaylistStatusSpan.textContent = `エラー: ${errorMessage}`;
+          createPlaylistStatusSpan.style.color = "red";
+        })
+        .finally(() => {
+          // 成功・失敗に関わらず、ボタンを再度有効化
+          submitPlaylistButton.disabled = false;
+        });
+    });
+  }
+}); // DOMContentLoaded

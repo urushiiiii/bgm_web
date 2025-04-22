@@ -5,4 +5,5 @@ return array(
     'hello(/:name)?' => array('welcome/hello', 'name' => 'hello'),
     'songs' => 'songs/index',
     'api/songs/upload' => 'api/songs/upload',
+    'api/playlists/create' => 'api/playlists/create',
 );
