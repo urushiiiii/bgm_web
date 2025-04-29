@@ -14,6 +14,7 @@ function AppViewModel() {
   // For song list in the playlist detail view
   self.currentPlaylistSongs = ko.observableArray([]); // Holds the songs for the currently viewed playlist
   self.loadingPlaylistError = ko.observable(null); // Holds error message if loading currentPlaylistSongs fails
+  self.currentPlaylistId = ko.observable(null);
 
   /**
    * Loads all songs from the API for the "Add Song" modal.
@@ -64,7 +65,7 @@ function AppViewModel() {
     }
     self.loadingPlaylistError(null); // Reset playlist specific error
     self.currentPlaylistSongs([]); // Clear the current list while loading
-    console.log(`Loading songs for playlist ID: ${playlistId}...`);
+    self.currentPlaylistId(playlistId);
 
     const apiUrl = `/api/playlists/${playlistId}/songs`;
 
@@ -98,9 +99,198 @@ function AppViewModel() {
       });
   };
 
-  // --- Add other ViewModel properties or methods here if needed ---
-  // Example for playlist deletion confirmation (to be implemented later)
-  // self.confirmDeletePlaylist = function(playlist) { ... }
+  self.removeSong = function (songToRemove) {
+    // 引数で削除対象の楽曲データを受け取る
+    console.log("削除ボタンがクリックされました:", songToRemove); // まずはクリックされたか確認
+    console.log("--- removeSong called ---");
+    console.log("songToRemove object:", songToRemove); // ★削除対象の楽曲オブジェクトの中身を確認
+    const songId = songToRemove ? songToRemove.id : null; // songToRemove が存在するか確認
+    console.log("Extracted songId:", songId); // ★抽出した songId を確認
+    const playlistId = self.currentPlaylistId(); // ViewModelからプレイリストIDを取得
+    console.log("Current playlistId from ViewModel:", playlistId); // ★ViewModelから取得した playlistId を確認
+    // --- ▲ デバッグログ追加 ▲ ---
+
+    if (!playlistId || !songId) {
+      console.error("プレイリストIDまたは楽曲IDが取得できません。");
+      // エラーメッセージをユーザーに表示する処理を追加してもよい
+      return;
+    }
+
+    // (任意) 削除確認ダイアログ
+    if (
+      !confirm(
+        `プレイリスト「<span class="math-inline">\{/\* ViewModelにプレイリスト名も必要？ \*/''\}」から楽曲「</span>{songToRemove.name}」を削除しますか？`
+      )
+    ) {
+      return; // キャンセルされたら何もしない
+    }
+
+    // --- ▼ デバッグログ追加 ▼ ---
+    const apiUrl = `/api/playlists/<span class="math-inline">\{playlistId\}/songs/</span>{songId}`; // URLを組み立て
+    console.log("Generated API URL:", apiUrl); // ★組み立てられたURLを確認
+    // --- ▲ デバッグログ追加 ▲ ---
+
+    console.log(
+      `プレイリストID: ${playlistId} から 楽曲ID: ${songId} を削除します。`
+    );
+
+    // TODO: ここで削除APIを呼び出す fetch 処理を実装する (次のステップ)
+    // fetch(`/api/playlists/<span class="math-inline">\{playlistId\}/songs/</span>{songId}`, { method: 'DELETE' })
+    // .then(...)
+    // .then(data => {
+    //     if (data.success) {
+    //         // ★★★ Knockout.js の機能で配列から要素を削除 ★★★
+    //         self.currentPlaylistSongs.remove(songToRemove);
+    //         console.log('リストから楽曲を削除しました。');
+    //     } else {
+    //         // エラー処理
+    //     }
+    // })
+    // .catch(...)
+
+    alert("削除API呼び出しとリスト更新はまだ実装されていません。"); // 仮のアラート
+  };
+  self.removeSong = function (songToRemove) {
+    // 引数で削除対象の楽曲データを受け取る
+    console.log("removeSong called with song data:", songToRemove); // ★ デバッグログ追加
+    const songId = songToRemove.id; // Knockoutが渡すオブジェクトからID取得
+    const playlistId = self.currentPlaylistId(); // ViewModelから現在のプレイリストID取得
+    console.log(
+      `Attempting to remove Song ID: ${songId} (type: ${typeof songId}) from Playlist ID: ${playlistId} (type: ${typeof playlistId})`
+    ); // ★ デバッグログ追加 (型も確認)
+
+    // IDが取得できているか、数値（または数値に変換可能か）をチェック
+    if (
+      !playlistId ||
+      !songId ||
+      isNaN(parseInt(playlistId)) ||
+      isNaN(parseInt(songId))
+    ) {
+      console.error(
+        "無効なプレイリストIDまたは楽曲IDです。Aborting.",
+        "PlaylistID:",
+        playlistId,
+        "SongID:",
+        songId
+      );
+      alert("エラー：削除対象を特定できませんでした。"); // ユーザーへのフィードバック
+      return;
+    }
+
+    // (任意) 削除確認ダイアログ
+    // ★ プレイリスト名も表示したい場合は、ViewModelに currentPlaylistName なども必要
+    if (
+      !confirm(`プレイリストから楽曲「${songToRemove.name}」を削除しますか？`)
+    ) {
+      return; // キャンセルされたら何もしない
+    }
+
+    console.log(
+      `プレイリストID: ${playlistId} から 楽曲ID: ${songId} を削除します。`
+    );
+
+    // ★★★ API URLの構築を確認 ★★★
+    const apiUrl = `/api/playlists/${playlistId}/songs/${songId}`;
+    console.log("Calling API URL:", apiUrl); // ★ デバッグログ追加
+
+    // fetch 処理 (DELETEメソッド)
+    fetch(apiUrl, { method: "DELETE" })
+      .then((response) => {
+        if (!response.ok) {
+          /* エラー処理 */ throw new Error(`HTTP ${response.status}`);
+        }
+        // 204 No Content の場合は json() を呼ばない
+        if (response.status === 204) {
+          return null;
+        }
+        return response.json();
+      })
+      .then((data) => {
+        // data が null (204) または success:true の場合に成功とみなす
+        if (data === null || data.success) {
+          const message = data ? data.message : "楽曲を削除しました。"; // 204用にデフォルトメッセージ
+          console.log(message);
+          // ★ Knockout.js の機能で配列から要素を削除 ★
+          self.currentPlaylistSongs.remove(songToRemove);
+          // alert(message); // アラートは任意
+          // 必要なら画面上部にメッセージ表示
+          const statusDiv = document.getElementById("playlist-status"); // 仮のID
+          if (statusDiv) {
+            statusDiv.textContent = message;
+            statusDiv.style.color = "green";
+          }
+        } else {
+          alert(`エラー: ${data.message || "削除に失敗しました。"}`); // 簡単なエラー表示
+        }
+      })
+      .catch((error) => {
+        console.error("楽曲削除エラー:", error);
+        alert(`エラーが発生しました: ${error.message || "通信エラー"}`);
+      });
+  };
+  self.deletePlaylist = function (data, event) {
+    // ★ 引数を (data, event) に変更 ★
+    console.log("deletePlaylist called. Data context:", data, "Event:", event); // デバッグログ
+
+    // クリックされたボタン要素をイベントオブジェクトから取得
+    const button = event.currentTarget; // ★ event.currentTarget を使う
+    if (!button) {
+      console.error("Could not get button element from event.");
+      alert("エラー: ボタン要素を取得できませんでした。");
+      return;
+    }
+
+    // ボタンの data-* 属性から ID と名前を取得
+    const playlistId = button.getAttribute("data-playlist-id");
+    const playlistName = button.getAttribute("data-playlist-name");
+    console.log(
+      `Attempting to delete Playlist ID: ${playlistId}, Name: ${playlistName}`
+    );
+
+    // IDが取得できたか、数値かなどをチェック
+    if (!playlistId || !playlistName || isNaN(parseInt(playlistId))) {
+      console.error(
+        "Invalid playlistId or playlistName from button attributes."
+      );
+      alert("エラー: 削除対象のプレイリスト情報を取得できませんでした。");
+      return;
+    }
+
+    // 削除確認
+    if (
+      !confirm(
+        `プレイリスト「${playlistName}」を削除しますか？\nこの操作は元に戻せません。関連する予約も削除されます。`
+      )
+    ) {
+      return; // キャンセル
+    }
+
+    console.log(`プレイリストID: ${playlistId} を削除します。`);
+    const apiUrl = `/api/playlists/${playlistId}`;
+
+    // fetch 処理 (DELETEメソッド)
+    fetch(apiUrl, { method: "DELETE" })
+      .then((response) => {
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        if (response.status === 204) {
+          return null;
+        } // No Content も成功とみなす
+        return response.json();
+      })
+      .then((data) => {
+        const message = data ? data.message : "プレイリストを削除しました。";
+        console.log(message);
+        alert(message);
+        // 削除後は全体ページに戻る (URLは環境に合わせて調整が必要かも)
+        window.location.href = "/";
+      })
+      .catch((error) => {
+        console.error("プレイリスト削除エラー:", error);
+        alert(`エラーが発生しました: ${error.message || "通信エラー"}`);
+      });
+  };
 }
 
 /**

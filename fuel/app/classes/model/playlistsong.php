@@ -96,4 +96,25 @@ class Model_PlaylistSong extends Model
             );
         }
     }
+    /**
+     * 指定されたプレイリストから特定の楽曲を削除する
+     * @param int $playlist_id プレイリストID
+     * @param int $song_id 削除する楽曲ID
+     * @return bool 成功した場合 true、失敗した場合 false
+     */
+    public static function remove_song($playlist_id, $song_id)
+    {
+        try {
+            $rows_affected = DB::delete('playlist_songs')
+                                ->where('playlist_id', '=', $playlist_id)
+                                ->where('song_id', '=', $song_id)
+                                ->limit(1) // 念のため
+                                ->execute();
+            // 削除された行があれば成功とみなす (なければ元々なかっただけ)
+            return true; // 厳密には $rows_affected > 0 を返す方が正確かも
+        } catch (\Database_Exception $e) {
+            \Log::error('楽曲削除中のDBエラー: ' . $e->getMessage(), array('playlist_id' => $playlist_id, 'song_id' => $song_id));
+            return false;
+        }
+    }
 }

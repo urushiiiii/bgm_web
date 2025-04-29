@@ -114,4 +114,56 @@ class Controller_Api_Playlists extends Controller_Rest
             return \Response::forge(\Format::forge($response)->to_json(), 500, array('Content-Type' => 'application/json'));
         }
     }
+
+        /**
+     * プレイリストから特定の楽曲を削除する (DELETE /api/playlists/:pid/songs/:sid)
+     */
+    public function delete_song($playlist_id = null, $song_id = null)
+    {
+        // パラメータチェック
+        if ($playlist_id === null || !ctype_digit((string)$playlist_id) || $song_id === null || !ctype_digit((string)$song_id)) {
+             return \Response::forge(\Format::forge(array('success' => false, 'message' => '無効なプレイリストIDまたは楽曲IDです。'))->to_json(), 400, array('Content-Type' => 'application/json'));
+        }
+
+        // Modelを呼び出して削除処理 (Model_PlaylistSong を使う想定)
+        $result = Model_PlaylistSong::remove_song((int)$playlist_id, (int)$song_id);
+
+        if ($result) {
+            return \Response::forge(\Format::forge(array(
+                'success' => true,
+                'message' => 'プレイリストから楽曲を削除しました。'
+            ))->to_json(), 200, array('Content-Type' => 'application/json')); // 200 OK or 204 No Contentでも良い
+        } else {
+            return \Response::forge(\Format::forge(array(
+                'success' => false,
+                'message' => '楽曲の削除に失敗しました。'
+            ))->to_json(), 500, array('Content-Type' => 'application/json'));
+        }
+    }
+
+    /**
+     * 指定されたプレイリスト自体を削除する (DELETE /api/playlists/:id)
+     */
+    public function delete_playlist($id = null)
+    {
+         // パラメータチェック
+        if ($id === null || !ctype_digit((string)$id)) {
+             return \Response::forge(\Format::forge(array('success' => false, 'message' => '無効なプレイリストIDです。'))->to_json(), 400, array('Content-Type' => 'application/json'));
+        }
+
+        // Modelを呼び出して削除処理 (関連データは CASCADE DELETE に任せる想定)
+        $result = Model_Playlist::delete_playlist((int)$id);
+
+         if ($result) {
+             return \Response::forge(\Format::forge(array(
+                 'success' => true,
+                 'message' => 'プレイリストを削除しました。'
+             ))->to_json(), 200, array('Content-Type' => 'application/json')); // 200 OK or 204 No Content
+         } else {
+             return \Response::forge(\Format::forge(array(
+                 'success' => false,
+                 'message' => 'プレイリストの削除に失敗しました。'
+             ))->to_json(), 500, array('Content-Type' => 'application/json'));
+         }
+    }
 }

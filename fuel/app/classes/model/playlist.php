@@ -104,4 +104,23 @@ class Model_Playlist extends Model
             return null; // エラー時も null を返す (Controllerでハンドリング)
         }
     }
+    /**
+     * 指定されたIDのプレイリストを削除する
+     * (関連する playlist_songs, reservations レコードは外部キーの CASCADE DELETE に任せる想定)
+     * @param int $id 削除するプレイリストのID
+     * @return bool 成功した場合 true、失敗した場合 false
+     */
+    public static function delete_playlist($id)
+    {
+        try {
+            $rows_affected = DB::delete('playlists')
+                                ->where('id', '=', $id)
+                                ->limit(1)
+                                ->execute();
+            return ($rows_affected > 0); // 削除された行があれば成功
+        } catch (\Database_Exception $e) {
+            \Log::error('プレイリスト削除中のDBエラー: ' . $e->getMessage() . ' Playlist ID: ' . $id);
+            return false;
+        }
+    }
 }

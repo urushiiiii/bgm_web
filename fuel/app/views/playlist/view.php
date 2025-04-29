@@ -9,7 +9,10 @@
         <button type="button" id="play-playlist-button" data-playlist-id="<?php echo e($playlist['id']); ?>">▶ このプレイリストを再生</button> <?php // プレイリスト再生ボタン (機能は後で) ?>
         <button type="button" id="add-song-to-playlist-button" data-playlist-id="<?php echo e($playlist['id']); ?>">楽曲を追加</button> <?php // 楽曲追加ボタン (機能は後で) ?>
          <?php // ↓ プレイリスト削除ボタンもここに追加 ↓ ?>
-         <button type="button" class="delete-playlist-button" data-playlist-id="<?php echo e($playlist['id']); ?>" data-playlist-name="<?php echo e($playlist['name']); ?>">このプレイリストを削除</button>
+         <button type="button" class="delete-playlist-button"
+                 data-bind="click: deletePlaylist"
+                 data-playlist-id="<?php echo e($playlist['id']); ?>"
+                 data-playlist-name="<?php echo e($playlist['name']); ?>">このプレイリストを削除</button>
     </div>
 
     <h3>収録曲</h3>
@@ -29,7 +32,7 @@
                     <td data-bind="text: name"></td>      <?php // ViewModelのsongs配列内の各要素のnameプロパティを表示 ?>
                     <td>
                         <button type="button" class="remove-song-button"
-                        data-bind="click: $parent.removeSong, attr: {'data-song-id': id, 'data-playlist-id': $parent.currentPlaylistId}">削除</button>
+                        data-bind="click: $parent.removeSong, attr: {'data-song-id': id}">削除</button>
                     </td>
                 </tr>
             </tbody>
