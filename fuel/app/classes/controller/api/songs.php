@@ -4,6 +4,31 @@ class Controller_Api_Songs extends Controller_Rest
 {
     protected $_response_format = 'json';
 
+    /**
+     * 楽曲一覧を取得する (GET /api/songs)
+     */
+    public function get_index() // GETリクエストなのでメソッド名を get_index とする規約
+    {
+        try {
+            // Modelを使って全楽曲を取得 (作成日時順)
+            $songs = Model_Song::find_all();
+
+            $response = array(
+                'success' => true,
+                'songs' => $songs, // 取得した楽曲リストを返す
+            );
+            return \Response::forge(\Format::forge($response)->to_json(), 200, array('Content-Type' => 'application/json'));
+
+        } catch (\Exception $e) { // より広範なエラーを捕捉
+            \Log::error('楽曲一覧APIエラー: ' . $e->getMessage());
+            $response = array(
+                'success' => false,
+                'message' => '楽曲一覧の取得中にエラーが発生しました。',
+            );
+            return \Response::forge(\Format::forge($response)->to_json(), 500, array('Content-Type' => 'application/json'));
+        }
+    }
+
     public function post_upload()
     {
         $config = array(

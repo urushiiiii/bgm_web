@@ -210,3 +210,51 @@ WARNING - 2025-04-22 16:42:51 --> Fuel\Core\Fuel::init - The configured locale e
 INFO - 2025-04-22 16:42:52 --> Fuel\Core\Request::__construct - Creating a new main Request with URI = "home/index"
 INFO - 2025-04-22 16:42:52 --> Fuel\Core\Request::execute - Called
 INFO - 2025-04-22 16:42:52 --> Fuel\Core\Request::execute - Setting main Request
+WARNING - 2025-04-22 17:45:35 --> Fuel\Core\Fuel::init - The configured locale en_US is not installed on your system.
+INFO - 2025-04-22 17:45:35 --> Fuel\Core\Request::__construct - Creating a new main Request with URI = "home/index"
+INFO - 2025-04-22 17:45:35 --> Fuel\Core\Request::execute - Called
+INFO - 2025-04-22 17:45:35 --> Fuel\Core\Request::execute - Setting main Request
+WARNING - 2025-04-22 17:45:40 --> Fuel\Core\Fuel::init - The configured locale en_US is not installed on your system.
+INFO - 2025-04-22 17:45:40 --> Fuel\Core\Request::__construct - Creating a new main Request with URI = "playlist/view/1"
+INFO - 2025-04-22 17:45:40 --> Fuel\Core\Request::execute - Called
+INFO - 2025-04-22 17:45:40 --> Fuel\Core\Request::execute - Setting main Request
+ERROR - 2025-04-22 17:45:40 --> データベースエラー[プレイリスト詳細取得]: Unknown column 'playlist_songs.created_at as added_at' in 'field list' [ SELECT `songs`.`id`, `songs`.`name`, `songs`.`file_path`, `playlist_songs`.`created_at as added_at` FROM `playlist_songs` INNER JOIN `songs` ON (`playlist_songs`.`song_id` = `songs`.`id`) WHERE `playlist_songs`.`playlist_id` = 1 ORDER BY `playlist_songs`.`created_at` ASC ] Playlist ID: 1
+WARNING - 2025-04-22 17:45:40 --> 存在しないプレイリストIDが指定されました。ID: 1
+INFO - 2025-04-22 17:45:40 --> Fuel\Core\Request::__construct - Creating a new main Request with URI = "welcome/404"
+INFO - 2025-04-22 17:45:40 --> Fuel\Core\Request::execute - Called
+INFO - 2025-04-22 17:45:40 --> Fuel\Core\Request::execute - Setting main Request
+WARNING - 2025-04-22 17:49:16 --> Fuel\Core\Fuel::init - The configured locale en_US is not installed on your system.
+INFO - 2025-04-22 17:49:16 --> Fuel\Core\Request::__construct - Creating a new main Request with URI = "playlist/view/1"
+INFO - 2025-04-22 17:49:16 --> Fuel\Core\Request::execute - Called
+INFO - 2025-04-22 17:49:16 --> Fuel\Core\Request::execute - Setting main Request
+ERROR - 2025-04-22 17:49:17 --> データベースエラー[プレイリスト詳細取得]: Unknown column 'playlist_songs.created_at as added_at' in 'field list' [ SELECT `songs`.`id`, `songs`.`name`, `songs`.`file_path`, `playlist_songs`.`created_at as added_at` FROM `playlist_songs` INNER JOIN `songs` ON (`playlist_songs`.`song_id` = `songs`.`id`) WHERE `playlist_songs`.`playlist_id` = 1 ORDER BY `playlist_songs`.`created_at` ASC ] Playlist ID: 1
+WARNING - 2025-04-22 17:49:17 --> 存在しないプレイリストIDが指定されました。ID: 1
+INFO - 2025-04-22 17:49:17 --> Fuel\Core\Request::__construct - Creating a new main Request with URI = "welcome/404"
+INFO - 2025-04-22 17:49:17 --> Fuel\Core\Request::execute - Called
+INFO - 2025-04-22 17:49:17 --> Fuel\Core\Request::execute - Setting main Request
+WARNING - 2025-04-22 17:52:10 --> Fuel\Core\Fuel::init - The configured locale en_US is not installed on your system.
+INFO - 2025-04-22 17:52:10 --> Fuel\Core\Request::__construct - Creating a new main Request with URI = "playlist/view/1"
+INFO - 2025-04-22 17:52:10 --> Fuel\Core\Request::execute - Called
+INFO - 2025-04-22 17:52:10 --> Fuel\Core\Request::execute - Setting main Request
+ERROR - 2025-04-22 17:52:10 --> データベースエラー[プレイリスト詳細取得]: Unknown column 'playlist_songs.created_at as added_at' in 'field list' [ SELECT `songs`.`id`, `songs`.`name`, `songs`.`file_path`, `playlist_songs`.`created_at as added_at` FROM `playlist_songs` INNER JOIN `songs` ON (`playlist_songs`.`song_id` = `songs`.`id`) WHERE `playlist_songs`.`playlist_id` = 1 ORDER BY `playlist_songs`.`created_at` ASC ] Playlist ID: 1
+WARNING - 2025-04-22 17:52:10 --> 存在しないプレイリストIDが指定されました。ID: 1
+INFO - 2025-04-22 17:52:10 --> Fuel\Core\Request::__construct - Creating a new main Request with URI = "welcome/404"
+INFO - 2025-04-22 17:52:10 --> Fuel\Core\Request::execute - Called
+INFO - 2025-04-22 17:52:10 --> Fuel\Core\Request::execute - Setting main Request
+WARNING - 2025-04-22 17:52:17 --> Fuel\Core\Fuel::init - The configured locale en_US is not installed on your system.
+INFO - 2025-04-22 17:52:17 --> Fuel\Core\Request::__construct - Creating a new main Request with URI = "home/index"
+INFO - 2025-04-22 17:52:17 --> Fuel\Core\Request::execute - Called
+INFO - 2025-04-22 17:52:17 --> Fuel\Core\Request::execute - Setting main Request
+WARNING - 2025-04-22 17:52:19 --> Fuel\Core\Fuel::init - The configured locale en_US is not installed on your system.
+INFO - 2025-04-22 17:52:19 --> Fuel\Core\Request::__construct - Creating a new main Request with URI = "playlist/view/1"
+INFO - 2025-04-22 17:52:19 --> Fuel\Core\Request::execute - Called
+INFO - 2025-04-22 17:52:19 --> Fuel\Core\Request::execute - Setting main Request
+ERROR - 2025-04-22 17:52:20 --> データベースエラー[プレイリスト詳細取得]: Unknown column 'playlist_songs.created_at as added_at' in 'field list' [ SELECT `songs`.`id`, `songs`.`name`, `songs`.`file_path`, `playlist_songs`.`created_at as added_at` FROM `playlist_songs` INNER JOIN `songs` ON (`playlist_songs`.`song_id` = `songs`.`id`) WHERE `playlist_songs`.`playlist_id` = 1 ORDER BY `playlist_songs`.`created_at` ASC ] Playlist ID: 1
+WARNING - 2025-04-22 17:52:20 --> 存在しないプレイリストIDが指定されました。ID: 1
+INFO - 2025-04-22 17:52:20 --> Fuel\Core\Request::__construct - Creating a new main Request with URI = "welcome/404"
+INFO - 2025-04-22 17:52:20 --> Fuel\Core\Request::execute - Called
+INFO - 2025-04-22 17:52:20 --> Fuel\Core\Request::execute - Setting main Request
+WARNING - 2025-04-22 17:58:04 --> Fuel\Core\Fuel::init - The configured locale en_US is not installed on your system.
+INFO - 2025-04-22 17:58:04 --> Fuel\Core\Request::__construct - Creating a new main Request with URI = "playlist/view/1"
+INFO - 2025-04-22 17:58:04 --> Fuel\Core\Request::execute - Called
+INFO - 2025-04-22 17:58:04 --> Fuel\Core\Request::execute - Setting main Request

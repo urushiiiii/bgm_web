@@ -6,4 +6,7 @@ return array(
     'songs' => 'songs/index',
     'api/songs/upload' => 'api/songs/upload',
     'api/playlists/create' => 'api/playlists/create',
+    'playlist/view/:id' => 'playlist/view/$1',
+    'api/songs' => 'api/songs/index',
+    'api/playlists/:id/songs' => 'api/playlists/songs/$1',
 );
