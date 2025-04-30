@@ -42,8 +42,19 @@
         <?php echo isset($content) ? $content : ''; ?>
     </main>
 
+    <?php // ↓ 再生用のaudio要素を設置 (通常は非表示) ↓ ?>
+    <audio id="audio-player" style="display: none;"></audio>
+
     <footer>
-        <p>&copy; <?php echo date('Y'); ?> Your Name or App Name</p>
+        <div class="player-controls" style="padding: 10px; border-top: 1px solid #ccc; text-align: center;"> 
+            <button type="button" id="play-pause-button" data-bind="click: playPauseToggle, text: isPlaying() ? '⏸ 一時停止' : '▶ 再生', enable: currentSong()">
+                <?php // Knockoutの isPlaying 状態に応じてテキストと活性状態が変わる ?>
+            </button>
+            <span style="margin-left: 15px;">再生中:</span>
+            <span data-bind="text: currentSong() ? currentSong().name : '---'"></span> <?php // Knockoutの currentSong の name を表示 ?>
+                <?php // ここに後でプログレスバーや音量調整などを追加 ?>
+        </div>
+        <p style="text-align: center; margin-top: 5px;">&copy; <?php echo date('Y'); ?> Your Name or App Name</p> <?php // コピーライトも中央揃えに(例) ?>
     </footer>
 
     <?php // body 閉じタグ直前でJSを読み込む場合 ?>

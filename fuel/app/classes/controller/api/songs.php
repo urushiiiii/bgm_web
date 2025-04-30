@@ -7,25 +7,48 @@ class Controller_Api_Songs extends Controller_Rest
     /**
      * 楽曲一覧を取得する (GET /api/songs)
      */
-    public function get_index() // GETリクエストなのでメソッド名を get_index とする規約
+    public function get_index()
     {
         try {
-            // Modelを使って全楽曲を取得 (作成日時順)
             $songs = Model_Song::find_all();
+            $formatted_songs = array(); // 返却用の新しい配列を用意
+
+            foreach ($songs as $song) {
+                // DBから取得した絶対パス (例: /var/www/html/my_fuel_project/public/assets/...)
+                $absolute_path = $song['file_path'];
+
+                // FuelPHPの公開ディレクトリ(DOCROOT)のパスを取得
+                // (DOCROOT は public/ ディレクトリを指すはず)
+                $doc_root_path = DOCROOT;
+
+                // 絶対パスから DOCROOT 部分を取り除き、Webルートからの相対パスを作成 (先頭に / を付ける)
+                $relative_path = '/' . ltrim(str_replace(str_replace('/', DIRECTORY_SEPARATOR, $doc_root_path), '', $absolute_path), DIRECTORY_SEPARATOR);
+                // Windowsのパス区切り文字(\)も考慮して置換し、先頭のスラッシュを調整
+
+                // 最終的なパスを / に統一 (Web用)
+                $web_path = str_replace(DIRECTORY_SEPARATOR, '/', $relative_path);
+
+                \Log::debug('Converted path: ' . $absolute_path . ' -> ' . $web_path); // 変換結果をログ出力(確認用)
+
+                $formatted_songs[] = array(
+                    'id' => $song['id'],
+                    'name' => $song['name'],
+                    'file_path' => $web_path, // ★ 変換後のWebパスをセット ★
+                    'created_at' => $song['created_at'],
+                    // 他に必要なカラムがあればここに追加
+                );
+            }
 
             $response = array(
                 'success' => true,
-                'songs' => $songs, // 取得した楽曲リストを返す
+                'songs' => $formatted_songs, // ★ 変換後の配列を返す ★
             );
             return \Response::forge(\Format::forge($response)->to_json(), 200, array('Content-Type' => 'application/json'));
 
-        } catch (\Exception $e) { // より広範なエラーを捕捉
+        } catch (\Exception $e) {
             \Log::error('楽曲一覧APIエラー: ' . $e->getMessage());
-            $response = array(
-                'success' => false,
-                'message' => '楽曲一覧の取得中にエラーが発生しました。',
-            );
-            return \Response::forge(\Format::forge($response)->to_json(), 500, array('Content-Type' => 'application/json'));
+            // ... (エラーレスポンスは変更なし) ...
+            return \Response::forge(\Format::forge(array(/*...*/))->to_json(), 500, array('Content-Type' => 'application/json'));
         }
     }
 

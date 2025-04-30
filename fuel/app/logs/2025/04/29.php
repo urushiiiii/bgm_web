@@ -189,3 +189,11 @@ WARNING - 2025-04-29 14:50:31 --> Fuel\Core\Fuel::init - The configured locale e
 INFO - 2025-04-29 14:50:31 --> Fuel\Core\Request::__construct - Creating a new main Request with URI = "api/playlists/2/songs/3"
 INFO - 2025-04-29 14:50:31 --> Fuel\Core\Request::execute - Called
 INFO - 2025-04-29 14:50:31 --> Fuel\Core\Request::execute - Setting main Request
+WARNING - 2025-04-29 18:09:11 --> Fuel\Core\Fuel::init - The configured locale en_US is not installed on your system.
+INFO - 2025-04-29 18:09:11 --> Fuel\Core\Request::__construct - Creating a new main Request with URI = ""
+INFO - 2025-04-29 18:09:11 --> Fuel\Core\Request::execute - Called
+INFO - 2025-04-29 18:09:11 --> Fuel\Core\Request::execute - Setting main Request
+WARNING - 2025-04-29 18:10:18 --> Fuel\Core\Fuel::init - The configured locale en_US is not installed on your system.
+INFO - 2025-04-29 18:10:18 --> Fuel\Core\Request::__construct - Creating a new main Request with URI = ""
+INFO - 2025-04-29 18:10:18 --> Fuel\Core\Request::execute - Called
+INFO - 2025-04-29 18:10:18 --> Fuel\Core\Request::execute - Setting main Request
