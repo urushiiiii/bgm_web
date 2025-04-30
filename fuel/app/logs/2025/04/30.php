@@ -92,3 +92,37 @@ DEBUG - 2025-04-30 17:30:15 --> Converted path: /var/www/html/my_fuel_project/pu
 DEBUG - 2025-04-30 17:30:15 --> Converted path: /var/www/html/my_fuel_project/public/assets/uploads/songs/29b34a11c0bf5a6de9bfbe9ef9dd9d6b.mp3 -> /assets/uploads/songs/29b34a11c0bf5a6de9bfbe9ef9dd9d6b.mp3
 DEBUG - 2025-04-30 17:30:15 --> Converted path: /var/www/html/my_fuel_project/public/assets/uploads/songs/3f375bddeacf197109f653644fbdfc39.mp3 -> /assets/uploads/songs/3f375bddeacf197109f653644fbdfc39.mp3
 DEBUG - 2025-04-30 17:30:15 --> Converted path: /var/www/html/my_fuel_project/public/assets/uploads/songs/70499c8303f5d7ed69a153d7bbfc2ffa.mp3 -> /assets/uploads/songs/70499c8303f5d7ed69a153d7bbfc2ffa.mp3
+WARNING - 2025-04-30 17:59:22 --> Fuel\Core\Fuel::init - The configured locale en_US is not installed on your system.
+INFO - 2025-04-30 17:59:22 --> Fuel\Core\Request::__construct - Creating a new main Request with URI = "home/index"
+INFO - 2025-04-30 17:59:22 --> Fuel\Core\Request::execute - Called
+INFO - 2025-04-30 17:59:22 --> Fuel\Core\Request::execute - Setting main Request
+WARNING - 2025-04-30 17:59:26 --> Fuel\Core\Fuel::init - The configured locale en_US is not installed on your system.
+INFO - 2025-04-30 17:59:26 --> Fuel\Core\Request::__construct - Creating a new main Request with URI = "playlist/view/2"
+INFO - 2025-04-30 17:59:26 --> Fuel\Core\Request::execute - Called
+INFO - 2025-04-30 17:59:26 --> Fuel\Core\Request::execute - Setting main Request
+WARNING - 2025-04-30 18:00:01 --> Fuel\Core\Fuel::init - The configured locale en_US is not installed on your system.
+INFO - 2025-04-30 18:00:01 --> Fuel\Core\Request::__construct - Creating a new main Request with URI = ".well-known/appspecific/com.chrome.devtools"
+INFO - 2025-04-30 18:00:01 --> Fuel\Core\Request::execute - Called
+INFO - 2025-04-30 18:00:01 --> Fuel\Core\Request::execute - Setting main Request
+INFO - 2025-04-30 18:00:01 --> Fuel\Core\Request::__construct - Creating a new main Request with URI = "welcome/404"
+INFO - 2025-04-30 18:00:01 --> Fuel\Core\Request::execute - Called
+INFO - 2025-04-30 18:00:01 --> Fuel\Core\Request::execute - Setting main Request
+WARNING - 2025-04-30 18:17:43 --> Fuel\Core\Fuel::init - The configured locale en_US is not installed on your system.
+INFO - 2025-04-30 18:17:43 --> Fuel\Core\Request::__construct - Creating a new main Request with URI = "playlist/view/2"
+INFO - 2025-04-30 18:17:43 --> Fuel\Core\Request::execute - Called
+INFO - 2025-04-30 18:17:43 --> Fuel\Core\Request::execute - Setting main Request
+WARNING - 2025-04-30 18:17:44 --> Fuel\Core\Fuel::init - The configured locale en_US is not installed on your system.
+WARNING - 2025-04-30 18:17:44 --> Fuel\Core\Fuel::init - The configured locale en_US is not installed on your system.
+INFO - 2025-04-30 18:17:44 --> Fuel\Core\Request::__construct - Creating a new main Request with URI = "api/playlists/2/songs"
+INFO - 2025-04-30 18:17:44 --> Fuel\Core\Request::__construct - Creating a new main Request with URI = ".well-known/appspecific/com.chrome.devtools"
+INFO - 2025-04-30 18:17:44 --> Fuel\Core\Request::execute - Called
+INFO - 2025-04-30 18:17:44 --> Fuel\Core\Request::execute - Setting main Request
+INFO - 2025-04-30 18:17:44 --> Fuel\Core\Request::__construct - Creating a new main Request with URI = "welcome/404"
+INFO - 2025-04-30 18:17:44 --> Fuel\Core\Request::execute - Called
+INFO - 2025-04-30 18:17:44 --> Fuel\Core\Request::execute - Setting main Request
+INFO - 2025-04-30 18:17:44 --> Fuel\Core\Request::execute - Called
+INFO - 2025-04-30 18:17:44 --> Fuel\Core\Request::execute - Setting main Request
+WARNING - 2025-04-30 18:17:51 --> Fuel\Core\Fuel::init - The configured locale en_US is not installed on your system.
+INFO - 2025-04-30 18:17:51 --> Fuel\Core\Request::__construct - Creating a new main Request with URI = "api/playlists/2/songs/1"
+INFO - 2025-04-30 18:17:51 --> Fuel\Core\Request::execute - Called
+INFO - 2025-04-30 18:17:51 --> Fuel\Core\Request::execute - Setting main Request
