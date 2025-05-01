@@ -376,6 +376,70 @@ function AppViewModel() {
         alert(`エラーが発生しました: ${error.message || "通信エラー"}`);
       });
   };
+  /**
+   * 再生ログを記録するAPIを呼び出すメソッド (内部用)
+   * @param {number} songId - 記録する楽曲ID
+   */
+  self.recordPlayLog = function (songId) {
+    if (!songId || isNaN(parseInt(songId))) {
+      console.warn("Invalid songId passed to recordPlayLog:", songId);
+      return;
+    }
+    songId = parseInt(songId);
+    console.log(`再生ログ記録API呼び出し (Song ID: ${songId})`);
+
+    // --- ↓ fetch 処理を実装 ↓ ---
+    fetch("/api/logs/play", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        // 必要であればCSRFトークンなどをヘッダーに追加
+        // 'X-CSRF-Token': '<?php // echo Security::fetch_token(); ?>' // これはPHP内での書き方
+      },
+      body: JSON.stringify({ song_id: songId }), // JSON形式で送信
+    })
+      .then((response) => {
+        // レスポンスは必須ではないが、エラーチェックは行う
+        if (!response.ok) {
+          // 4xx, 5xx エラーの場合
+          return response
+            .json()
+            .catch(() => {
+              // エラー詳細をJSONで取得試行
+              throw new Error(
+                `ログ記録APIエラー! HTTP status: ${response.status}`
+              );
+            })
+            .then((errData) => {
+              throw { status: response.status, data: errData };
+            });
+        }
+        return response.json().catch(() => null); // 成功時はJSONを期待するが、無くても許容
+      })
+      .then((data) => {
+        if (data && data.success) {
+          console.log("再生ログ記録成功:", data.message);
+        } else if (data) {
+          // success: false または予期しない応答
+          console.error("再生ログ記録失敗:", data.message || "不明な応答");
+        } else {
+          // 応答ボディがない場合 (201 Created などでボディなしも考えられる)
+          console.log("再生ログ記録API応答受信 (ボディなし)");
+        }
+      })
+      .catch((error) => {
+        console.error("再生ログ記録API呼び出しエラー:", error);
+        let errorMessage = "ログ記録中にエラー発生";
+        if (error.data && error.data.message) {
+          errorMessage = error.data.message;
+        } else if (error.message) {
+          errorMessage = error.message;
+        }
+        // 必要であればユーザーにエラー通知 (ただしバックグラウンド処理なので必須ではないかも)
+        // console.error('ログ記録失敗:', errorMessage);
+      });
+    // --- ↑ ここまで fetch 処理 ↑ ---
+  };
 } // --- End of AppViewModel ---
 
 /**

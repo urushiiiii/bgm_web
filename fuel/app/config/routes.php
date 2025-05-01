@@ -13,4 +13,5 @@ return array(
     'api/playlists/:pid/songs/:sid' => 'api/playlists/song/$1/$2',
     // ↓ プレイリスト自体を削除するAPI (DELETEメソッド) ↓
     'api/playlists/:id' => 'api/playlists/playlist/$1', 
+    'api/logs/play' => 'api/logs/play',
 );

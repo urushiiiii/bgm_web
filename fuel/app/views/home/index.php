@@ -31,3 +31,36 @@
         <span id="create-playlist-status"></span>
     </div>
 </section>
+
+<section>
+    <h3>再生ログ</h3>
+    <?php // ↓ ここからログ一覧表示 ↓ ?>
+    <?php if (isset($logs) && !empty($logs)): ?>
+        <table border="1" style="width: 100%; margin-top: 10px;">
+            <thead>
+                <tr>
+                    <th>再生日時</th>
+                    <th>楽曲名</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($logs as $log): ?>
+                    <tr>
+                        <?php // 日時のフォーマット ?>
+                        <td><?php echo e(Date::forge(strtotime($log['created_at']))->format('%Y/%m/%d %H:%M:%S')); ?></td>
+                        <td><?php echo e($log['name']); ?></td> <?php // ModelでJOINして取得した楽曲名 ?>
+                    </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+
+        <div class="pagination-container" style="margin-top: 10px;">
+            <?php // Controllerから $data 配列経由で渡されたHTMLを出力。PHP標準関数でデコード ?>
+            <?php echo isset($pagination_links_html) ? html_entity_decode($pagination_links_html) : ''; ?>
+        </div>
+
+    <?php else: ?>
+        <p style="margin-top: 10px;">再生ログはまだありません。</p>
+    <?php endif; ?>
+    <?php // ↑ ここまでログ一覧表示 ↑ ?>
+</section>
