@@ -25,6 +25,14 @@ function AppViewModel() {
 
   self.currentPlayingPlaylistSongs = ko.observableArray([]); // 現在再生中のプレイリストの曲リスト
   self.currentSongIndex = ko.observable(-1); // 再生中の曲のインデックス (-1 はプレイリスト再生中でない)
+
+  // --- ↓ 予約用プレイリスト選択肢を追加 ↓ ---
+  self.availablePlaylists = ko.observableArray([]); // モーダル用プレイリストリスト
+  self.loadingAvailablePlaylistsError = ko.observable(null);
+  self.selectedPlaylistId = ko.observable(null); // ★ 予約フォームで選択されたIDを保持する用も追加
+
+  self.reservations = ko.observableArray([]); // 全体ページに表示する予約リスト
+  self.loadingReservationsError = ko.observable(null);
   /**
    * Initializes the HTML audio element and sets up event listeners.
    */
@@ -495,6 +503,177 @@ function AppViewModel() {
       });
     // --- ↑ ここまで fetch 処理 ↑ ---
   };
+  // --- ↓ 予約用プレイリスト一覧を読み込むメソッドを追加 ↓ ---
+  self.loadAvailablePlaylists = function () {
+    self.loadingAvailablePlaylistsError(null);
+    console.log("Loading available playlists from API...");
+
+    fetch("/api/playlists") // 作成したAPIを呼び出す
+      .then((response) => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.json();
+      })
+      .then((data) => {
+        if (data.success) {
+          self.availablePlaylists(data.playlists); // observableArrayを更新
+          console.log(
+            "利用可能なプレイリスト読み込み完了:",
+            self.availablePlaylists().length,
+            "件"
+          );
+        } else {
+          throw new Error(
+            data.message || "利用可能なプレイリストの取得に失敗しました。"
+          );
+        }
+      })
+      .catch((error) => {
+        console.error("利用可能なプレイリスト読み込みエラー:", error);
+        self.loadingAvailablePlaylistsError(error.message);
+      });
+  };
+
+  self.loadReservations = function () {
+    self.loadingReservationsError(null);
+    console.log("Loading reservations from API...");
+
+    fetch("/api/reservations") // ★これから作るAPIエンドポイント
+      .then((response) => {
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        return response.json();
+      })
+      .then((data) => {
+        if (data.success) {
+          self.reservations(data.reservations); // observableArray を更新
+          console.log(
+            "予約一覧読み込み完了:",
+            self.reservations().length,
+            "件"
+          );
+        } else {
+          throw new Error(data.message || "予約一覧の取得に失敗しました。");
+        }
+      })
+      .catch((error) => {
+        console.error("予約一覧読み込みエラー:", error);
+        self.loadingReservationsError(error.message);
+      });
+  };
+  self.deleteReservation = function (reservationToDelete) {
+    // ★ 引数は予約データ ★
+    console.log(
+      "deleteReservation called with reservation data:",
+      reservationToDelete
+    );
+    // ↓ 予約IDを正しく取得 ↓
+    const reservationId = reservationToDelete ? reservationToDelete.id : null;
+    if (!reservationId || isNaN(parseInt(reservationId))) {
+      console.error("Invalid reservationId. Aborting delete.", reservationId);
+      alert("エラー：削除対象の予約を特定できませんでした。");
+      return;
+    }
+    const playlistName =
+      reservationToDelete.playlist_name || "不明なプレイリスト"; // 名前表示用に
+    const reservationTime =
+      reservationToDelete.reservation_datetime || "不明な日時";
+
+    if (
+      !confirm(
+        `予約 (プレイリスト: ${playlistName}, 日時: ${new Date(
+          reservationTime
+        ).toLocaleString()}) を削除しますか？`
+      )
+    ) {
+      return; // キャンセル
+    }
+
+    console.log(`予約ID: ${reservationId} を削除します。`);
+    // ★★★ API URL を修正 ★★★
+    const apiUrl = `/api/reservations/delete/${reservationId}`; // ★ 変更後のURL ★
+    console.log(`Calling DELETE API URL: ${apiUrl}`);
+
+    fetch(apiUrl, { method: "DELETE" })
+      .then((response) => {
+        /* ... (前回と同様の応答処理) ... */
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        if (response.status === 204) {
+          return null;
+        }
+        return response.json();
+      })
+      .then((data) => {
+        if (data === null || data.success) {
+          const message = data ? data.message : "予約を削除しました。";
+          console.log(message);
+          // ★ observableArray から削除 ★
+          self.reservations.remove(reservationToDelete);
+          alert(message); // またはメッセージ表示
+        } else {
+          alert(`エラー: ${data.message || "削除に失敗しました。"}`);
+        }
+      })
+      .catch((error) => {
+        console.error("予約削除エラー:", error);
+        alert(`エラーが発生しました: ${error.message || "通信エラー"}`);
+      });
+  };
+  // --- ↓ 予約編集用のプロパティとメソッドを追加 ↓ ---
+  self.isEditingReservation = ko.observable(false); // モーダルが編集モードかどうかのフラグ
+  self.editingReservationId = ko.observable(null); // 現在編集中の予約ID
+
+  // 予約フォームにデータをセットするヘルパー関数
+  self.setReservationFormData = function (reservation) {
+    if (reservation) {
+      // 日時文字列 (YYYY-MM-DD HH:MM:SS) から日付と時刻を分離
+      const dateTime = new Date(
+        reservation.reservation_datetime.replace(/-/g, "/")
+      ); // Safari等での互換性考慮
+      const dateStr =
+        dateTime.getFullYear() +
+        "-" +
+        ("0" + (dateTime.getMonth() + 1)).slice(-2) +
+        "-" +
+        ("0" + dateTime.getDate()).slice(-2);
+      const timeStr =
+        ("0" + dateTime.getHours()).slice(-2) +
+        ":" +
+        ("0" + dateTime.getMinutes()).slice(-2);
+
+      self.selectedPlaylistId(reservation.playlist_id); // ドロップダウンの選択
+      document.getElementById("reservation-date").value = dateStr; // 日付入力欄
+      document.getElementById("reservation-time").value = timeStr; // 時刻入力欄
+    } else {
+      // データがなければフォームをクリア
+      self.selectedPlaylistId(null);
+      document.getElementById("reservation-date").value = "";
+      document.getElementById("reservation-time").value = "";
+    }
+    // エラーメッセージもクリア
+    const reservationStatusDiv = document.getElementById("reservation-status");
+    if (reservationStatusDiv) reservationStatusDiv.textContent = "";
+  };
+
+  // 編集ボタンがクリックされたときに呼び出されるメソッド
+  self.startEditReservation = function (reservationToEdit) {
+    console.log("Editing reservation:", reservationToEdit);
+    self.isEditingReservation(true); // 編集モードにする
+    self.editingReservationId(reservationToEdit.id); // 編集対象IDを保持
+
+    // APIから最新の予約データを取得してフォームにセット (リストのデータを使うだけでも良いが、APIを使う方が確実)
+    // または、引数の reservationToEdit をそのまま使う (今回はこちらで実装)
+    self.setReservationFormData(reservationToEdit);
+
+    // 利用可能なプレイリストを読み込む (ドロップダウン用、未読込なら)
+    if (self.availablePlaylists().length === 0) {
+      self.loadAvailablePlaylists();
+    }
+
+    // モーダルを表示
+    const reservationModal = document.getElementById("reservation-modal");
+    if (reservationModal) reservationModal.style.display = "block";
+  };
 } // --- End of AppViewModel ---
 
 /**
@@ -594,12 +773,96 @@ document.addEventListener("DOMContentLoaded", function () {
     createPlaylistStatusSpan &&
     playlistListUl
   ) {
-    /* ... Submit form (fetch) ... */ submitPlaylistButton.addEventListener(
-      "click",
-      () => {
-        /* ... (previous code for fetch /api/playlists/create and DOM update) ... */
+    submitPlaylistButton.addEventListener("click", function () {
+      // ★★★ ここから下が消えてしまったコード ★★★
+      const playlistName = newPlaylistNameInput.value.trim(); // 入力値を取得し、前後の空白を削除
+
+      if (playlistName === "") {
+        createPlaylistStatusSpan.textContent =
+          "プレイリスト名を入力してください。";
+        createPlaylistStatusSpan.style.color = "red";
+        return; // 名前が空なら何もしない
       }
-    );
+
+      createPlaylistStatusSpan.textContent = "作成中...";
+      createPlaylistStatusSpan.style.color = "black";
+      submitPlaylistButton.disabled = true; // 連打防止
+
+      // FormDataオブジェクトを作成し、名前を追加
+      const formData = new FormData();
+      formData.append("name", playlistName);
+
+      // fetch APIでプレイリスト作成APIにPOSTリクエストを送信
+      fetch("/api/playlists/create", {
+        method: "POST",
+        body: formData,
+      })
+        .then((response) => {
+          if (!response.ok) {
+            // エラーレスポンスの場合
+            return response
+              .json()
+              .catch(() => {
+                throw new Error(`HTTP error! status: ${response.status}`);
+              })
+              .then((errData) => {
+                throw { status: response.status, data: errData };
+              });
+          }
+          return response.json(); // 成功レスポンスをJSONで取得
+        })
+        .then((data) => {
+          console.log("プレイリスト作成応答:", data);
+          if (data.success) {
+            createPlaylistStatusSpan.textContent = data.message;
+            createPlaylistStatusSpan.style.color = "green";
+            newPlaylistNameInput.value = ""; // 入力欄をクリア
+            createPlaylistForm.style.display = "none"; // フォームを隠す
+
+            // ★★★ プレイリスト一覧の動的更新 (DOM操作) ★★★
+            const newListItem = document.createElement("li");
+            const newLink = document.createElement("a");
+            newLink.href = `/playlist/view/${data.playlist.id}`; // サーバーから返されたIDを使う
+            newLink.textContent = data.playlist.name; // サーバーから返された名前を使う
+            const dateSpan = document.createElement("span");
+            // サーバーから created_at が返ってくるならそれを使うのが望ましい
+            dateSpan.textContent = ` (作成日: ${new Date().toLocaleDateString()})`; // 仮の日付表示
+            newListItem.appendChild(newLink);
+            newListItem.appendChild(dateSpan);
+
+            // 「まだありません」の表示を削除 (もしあれば)
+            const noPlaylistLi = playlistListUl.querySelector("li:only-child");
+            if (
+              noPlaylistLi &&
+              noPlaylistLi.textContent.includes("まだありません")
+            ) {
+              playlistListUl.innerHTML = ""; // 中身を一旦空にする
+            }
+
+            playlistListUl.appendChild(newListItem); // 新しい項目をリストに追加
+            // ★★★ ここまで ★★★
+          } else {
+            // 作成失敗 (名前重複など)
+            createPlaylistStatusSpan.textContent = `エラー: ${data.message}`;
+            createPlaylistStatusSpan.style.color = "red";
+          }
+        })
+        .catch((error) => {
+          console.error("プレイリスト作成エラー:", error);
+          let errorMessage = "作成中にエラーが発生しました。";
+          if (error.data && error.data.message) {
+            errorMessage = error.data.message;
+          } else if (error.message) {
+            errorMessage = error.message;
+          }
+          createPlaylistStatusSpan.textContent = `エラー: ${errorMessage}`;
+          createPlaylistStatusSpan.style.color = "red";
+        })
+        .finally(() => {
+          // 成功・失敗に関わらず、ボタンを再度有効化
+          submitPlaylistButton.disabled = false;
+        });
+    });
   }
 
   // --- ④ Playlist Detail Page - Add Song Modal Event Listeners ---
@@ -683,6 +946,193 @@ document.addEventListener("DOMContentLoaded", function () {
           checkedBoxes.forEach((cb) => (cb.checked = false));
         });
     });
+  }
+
+  // --- ↓ 予約作成モーダルの表示制御を追加 ↓ ---
+  const createReservationButton = document.getElementById(
+    "create-reservation-button"
+  ); // 全体ページのボタン
+  const reservationModal = document.getElementById("reservation-modal"); // モーダル本体
+  const cancelReservationButton = document.getElementById(
+    "cancel-reservation-button"
+  ); // モーダルのキャンセルボタン
+  const reservationStatusDiv = document.getElementById("reservation-status"); // メッセージ表示用
+
+  // 「新規予約を作成」ボタンがクリックされたらモーダルを表示
+  if (createReservationButton && reservationModal) {
+    createReservationButton.addEventListener("click", function () {
+      // モーダル表示前に中身をリセット（任意）
+      if (reservationStatusDiv) reservationStatusDiv.textContent = "";
+      const playlistSelect = document.getElementById("reservation-playlist");
+      if (playlistSelect) playlistSelect.selectedIndex = 0; // ドロップダウンを初期状態に
+      document.getElementById("reservation-date").value = ""; // 日付クリア
+      document.getElementById("reservation-time").value = ""; // 時刻クリア
+
+      reservationModal.style.display = "block"; // モーダルを表示
+      // ★★★ ViewModelのメソッドを呼び出してプレイリストを読み込む ★★★
+      appViewModel.loadAvailablePlaylists();
+    });
+  }
+
+  // モーダルの「キャンセル」ボタンがクリックされたらモーダルを非表示
+  if (cancelReservationButton && reservationModal) {
+    cancelReservationButton.addEventListener("click", function () {
+      reservationModal.style.display = "none"; // モーダルを非表示
+    });
+  }
+  // --- ↑ ここまで追加 ↑ ---
+
+  const saveReservationButton = document.getElementById(
+    "save-reservation-button"
+  );
+  const reservationPlaylistSelect = document.getElementById(
+    "reservation-playlist"
+  );
+  const reservationDateInput = document.getElementById("reservation-date");
+  const reservationTimeInput = document.getElementById("reservation-time");
+
+  if (
+    saveReservationButton &&
+    reservationPlaylistSelect &&
+    reservationDateInput &&
+    reservationTimeInput &&
+    reservationStatusDiv &&
+    reservationModal
+  ) {
+    saveReservationButton.addEventListener("click", function () {
+      // 1. 入力値を取得
+      const playlistId = appViewModel.selectedPlaylistId(); // ViewModelから選択中のIDを取得
+      const dateValue = reservationDateInput.value;
+      const timeValue = reservationTimeInput.value;
+
+      // 2. バリデーション (必須チェック、未来日時チェックなど)
+      let errors = [];
+      if (!playlistId) {
+        errors.push("プレイリストを選択してください。");
+      }
+      if (!dateValue) {
+        errors.push("日付を入力してください。");
+      }
+      if (!timeValue) {
+        errors.push("時刻を入力してください。");
+      }
+      if (dateValue && timeValue) {
+        const selectedDateTime = new Date(dateValue + "T" + timeValue + ":00");
+        // 簡単な未来チェック (5分後以降など、少し余裕を持たせても良い)
+        if (selectedDateTime <= new Date(Date.now() + 5 * 60 * 1000)) {
+          errors.push("現在時刻より十分に未来の日時を指定してください。");
+        }
+      }
+      if (errors.length > 0) {
+        reservationStatusDiv.textContent = errors.join(" ");
+        reservationStatusDiv.style.color = "red";
+        return; // エラーがあれば中断
+      }
+
+      // 状態メッセージとボタン無効化
+      reservationStatusDiv.textContent = appViewModel.isEditingReservation()
+        ? "予約を更新中..."
+        : "予約を保存中...";
+      reservationStatusDiv.style.color = "black";
+      saveReservationButton.disabled = true;
+
+      // 3. 送信するデータを作成
+      const formData = new FormData();
+      formData.append("playlist_id", playlistId);
+      formData.append("date", dateValue);
+      formData.append("time", timeValue);
+
+      // ★★★ 編集モードか新規作成モードかでAPIのURLとメソッドを決定 ★★★
+      let apiUrl;
+      let method = "POST"; // 更新もPOSTで受け付けるようにAPIを設計した場合
+      let successStatusCode = 201; // デフォルトは作成成功(201)
+
+      if (appViewModel.isEditingReservation()) {
+        // ---- 編集モードの場合 ----
+        const editingId = appViewModel.editingReservationId();
+        if (!editingId) {
+          alert(
+            "エラー: 編集対象の予約IDが見つかりません。ページを再読み込みしてください。"
+          );
+          saveReservationButton.disabled = false;
+          return;
+        }
+        apiUrl = `/api/reservations/update/${editingId}`; // 更新APIのURL
+        successStatusCode = 200; // 更新成功は通常200 OK
+      } else {
+        // ---- 新規作成モードの場合 ----
+        apiUrl = "/api/reservations/create"; // 作成APIのURL
+      }
+      console.log(`Calling API: ${method} ${apiUrl}`);
+
+      // 4. APIを呼び出す
+      fetch(apiUrl, { method: method, body: formData })
+        .then((response) => {
+          // エラーレスポンスもJSONで受け取る想定で処理
+          return response
+            .json()
+            .then((data) => ({
+              ok: response.ok,
+              status: response.status,
+              data: data,
+            }));
+        })
+        .then((result) => {
+          console.log(
+            `予約 ${
+              appViewModel.isEditingReservation() ? "更新" : "作成"
+            } 応答:`,
+            result
+          );
+          if (result.ok) {
+            // HTTPステータスが2xxの場合 (期待するのは 200 or 201)
+            alert(result.data.message); // 成功メッセージを表示
+            reservationModal.style.display = "none"; // モーダルを閉じる
+
+            // ★★★ 予約一覧を再読み込みして更新 ★★★
+            console.log("予約処理成功、リストを再読み込みします。");
+            appViewModel.loadReservations(); // ViewModelのメソッド呼び出し
+          } else {
+            // APIがエラーを返した場合 (4xx, 5xx)
+            reservationStatusDiv.textContent = `エラー (${result.status}): ${
+              result.data.message || "不明なエラー"
+            }`;
+            reservationStatusDiv.style.color = "red";
+          }
+        })
+        .catch((error) => {
+          // 通信エラーなどの場合
+          console.error(
+            `予約 ${
+              appViewModel.isEditingReservation() ? "更新" : "作成"
+            } Fetchエラー:`,
+            error
+          );
+          reservationStatusDiv.textContent = `エラー: 通信に失敗しました。 (${
+            error.message || "詳細不明"
+          })`;
+          reservationStatusDiv.style.color = "red";
+        })
+        .finally(() => {
+          saveReservationButton.disabled = false; // ボタンを再度有効化
+          // 編集モードを解除し、フォーム内容をリセット（成功・失敗に関わらず）
+          if (appViewModel.isEditingReservation()) {
+            appViewModel.isEditingReservation(false);
+            appViewModel.editingReservationId(null);
+          }
+          // 新規作成の場合もフォームをクリアした方が良いかも
+          appViewModel.setReservationFormData(null); // フォームクリアヘルパー呼び出し
+        });
+    });
+  }
+  // ★★★ 全体ページ（ホーム）の予約一覧を初期読み込み ★★★
+  const reservationsListTable = document.getElementById(
+    "reservations-list-table"
+  ); // Viewに追加したテーブルID
+  if (reservationsListTable) {
+    // 全体ページかどうかを判定
+    console.log("全体ページ読み込み、予約リスト取得開始...");
+    appViewModel.loadReservations(); // ★ ViewModelのメソッドを呼び出し ★
   }
 
   // --- ⑤ Initial data loading based on page ---

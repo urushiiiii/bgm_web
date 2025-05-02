@@ -33,6 +33,70 @@
 </section>
 
 <section>
+    <h3>予約一覧</h3>
+    <button type="button" id="create-reservation-button">新規予約を作成</button> <?php // このボタンの機能は後で実装 ?>
+
+    <?php /* テーブルにID付与 */ ?>
+    <table border="1" style="width: 100%; margin-top: 10px;" id="reservations-list-table">
+        <thead>
+            <tr>
+                <th>予約日時</th>
+                <th>プレイリスト名</th>
+                <th>状態</th>
+                <th>操作</th>
+            </tr>
+        </thead>
+        <?php /* ↓ tbody に data-bind="foreach: ..." を指定 ↓ */ ?>
+        <tbody data-bind="foreach: reservations">
+            <tr>
+                <?php /* new Date() を使ってフォーマット */ ?>
+                <td data-bind="text: new Date(reservation_datetime).toLocaleString()"></td>
+                <td data-bind="text: playlist_name"></td>
+                <td data-bind="text: status"></td>
+                <td>
+                <button type="button" class="edit-reservation-button"
+                data-bind="click: $root.startEditReservation, attr: {'data-reservation-id': id}">編集</button>
+                    <?php /* ↓ 削除ボタンに click バインディング追加 ↓ */ ?>
+                    <button type="button" class="delete-reservation-button" data-bind="click: $root.deleteReservation, attr: {'data-reservation-id': id}">削除</button>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+    <?php // Knockout.jsでデータがない場合やエラー時の表示 ?>
+    <p data-bind="visible: !reservations().length && !loadingReservationsError()">登録されている予約はありません。</p>
+    <p data-bind="if: loadingReservationsError" style="color: red;" data-bind="text: 'エラー: ' + loadingReservationsError()"></p>
+    <?php // ↑ ここまで予約一覧テーブル (Knockout.js化) ↑ ?>
+</section>
+
+<?php // --- ↓ 予約作成モーダル用のHTMLを追加 ↓ --- ?>
+<div id="reservation-modal" style="display: none; padding: 20px; border: 1px solid #ccc; margin-top: 20px; background-color: #f9f9f9;">
+<h3 data-bind="text: isEditingReservation() ? '再生予約の編集' : '新規再生予約'"></h3>
+    <div style="margin-bottom: 10px;">
+        <label for="reservation-playlist">プレイリスト:</label><br>
+        <select id="reservation-playlist" name="playlist_id"
+            data-bind="options: availablePlaylists,
+                       optionsText: 'name',
+                       optionsValue: 'id',
+                       value: selectedPlaylistId,
+                       optionsCaption: '-- 選択してください --'">
+        <?php /* ↑ Knockoutが自動でoptionを生成するので、中のoptionは不要 */ ?>
+    </select>
+    </div>
+    <div style="margin-bottom: 10px;">
+        <label for="reservation-date">再生日時:</label><br>
+        <input type="date" id="reservation-date" name="reservation_date">
+        <input type="time" id="reservation-time" name="reservation_time">
+    </div>
+    <div>
+        <button type="button" id="save-reservation-button" data-bind="text: isEditingReservation() ? '更新' : '予約を保存'"></button>
+        <button type="button" id="cancel-reservation-button">キャンセル</button>
+    </div>
+    <div id="reservation-status" style="margin-top: 10px; color: red;"></div> <?php // エラーメッセージ等表示用 ?>
+</div>
+<?php // --- ↑ ここまで追加 ↑ --- ?>
+
+
+<section>
     <h3>再生ログ</h3>
     <?php // ↓ ここからログ一覧表示 ↓ ?>
     <?php if (isset($logs) && !empty($logs)): ?>

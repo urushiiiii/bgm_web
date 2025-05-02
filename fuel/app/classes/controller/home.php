@@ -19,8 +19,13 @@ class Controller_Home extends Controller_Template
             $data['playlists'] = array(); // エラー時は空にする
         }
 
-        // --- ② 予約一覧取得 (現在は仮データ) ---
-        $data['reservations'] = array(); // TODO: 将来的に実装
+        // --- ② 予約一覧取得 ---
+        try {
+            $data['reservations'] = Model_Reservation::find_all_with_playlist_name(); // ← Model呼び出しに変更
+        } catch (\Exception $e) {
+            \Log::error('予約一覧取得エラー(Controller): ' . $e->getMessage());
+            $data['reservations'] = array(); // エラー時は空配列
+        }
 
         // --- ③ 再生ログ一覧取得とページネーション ---
         try {

@@ -182,4 +182,27 @@ class Controller_Api_Playlists extends Controller_Rest
              ))->to_json(), 500, array('Content-Type' => 'application/json'));
          }
     }
+    
+    /**
+     * プレイリスト一覧を取得する (GET /api/playlists)
+     */
+    public function get_index() // ★ GETリクエストに対応
+    {
+        try {
+            // Modelを使って全プレイリストを取得 (作成順)
+            $playlists = Model_Playlist::find_all();
+
+            $response = array(
+                'success' => true,
+                'playlists' => $playlists, // 取得したリストを返す
+            );
+            // 明示的にJSONを返す (推奨)
+            return \Response::forge(\Format::forge($response)->to_json(), 200, array('Content-Type' => 'application/json'));
+
+        } catch (\Exception $e) {
+            \Log::error('プレイリスト一覧APIエラー: ' . $e->getMessage());
+            $response = array('success' => false, 'message' => 'プレイリスト一覧の取得中にエラーが発生しました。');
+            return \Response::forge(\Format::forge($response)->to_json(), 500, array('Content-Type' => 'application/json'));
+        }
+    }
 }
