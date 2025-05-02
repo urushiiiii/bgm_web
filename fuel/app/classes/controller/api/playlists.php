@@ -99,9 +99,25 @@ class Controller_Api_Playlists extends Controller_Rest
                 return \Response::forge(\Format::forge(array('success' => false, 'message' => '指定されたプレイリストが見つかりません。'))->to_json(), 404, array('Content-Type' => 'application/json'));
             }
 
+            $formatted_songs = array();
+                foreach ($playlist_data['songs'] as $song) {
+                    $absolute_path = $song['file_path']; // DBからの絶対パス
+                    $doc_root_path = DOCROOT;
+                    $relative_path = '/' . ltrim(str_replace(str_replace('/', DIRECTORY_SEPARATOR, $doc_root_path), '', $absolute_path), DIRECTORY_SEPARATOR);
+                    $web_path = str_replace(DIRECTORY_SEPARATOR, '/', $relative_path); // Web用パス
+
+                    $formatted_songs[] = array(
+                        'id' => $song['id'],
+                        'name' => $song['name'],
+                        'file_path' => $web_path, // ★ 変換後のパスを使う ★
+                        // 'added_at' は不要になったので含めない (もし必要なら元の $song['added_at'] を使う)
+                        // 必要なら他のカラムも追加
+                    );
+                }
+
             $response = array(
                 'success' => true,
-                'songs' => $playlist_data['songs'] // 楽曲リストだけを返す
+                'songs' => $formatted_songs
             );
             return \Response::forge(\Format::forge($response)->to_json(), 200, array('Content-Type' => 'application/json'));
 

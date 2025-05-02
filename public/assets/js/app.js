@@ -23,6 +23,8 @@ function AppViewModel() {
   // --- Audio Player Reference ---
   self.audioElement = null; // Reference to the HTML <audio> element
 
+  self.currentPlayingPlaylistSongs = ko.observableArray([]); // 現在再生中のプレイリストの曲リスト
+  self.currentSongIndex = ko.observable(-1); // 再生中の曲のインデックス (-1 はプレイリスト再生中でない)
   /**
    * Initializes the HTML audio element and sets up event listeners.
    */
@@ -36,9 +38,31 @@ function AppViewModel() {
 
     self.audioElement.addEventListener("ended", function () {
       console.log("Audio ended");
-      self.isPlaying(false);
-      // TODO: Implement playlist "next song" logic here
-      self.currentSong(null);
+      self.isPlaying(false); // まず再生状態をfalseに
+
+      // 現在プレイリスト再生中か？
+      const currentPlaylist = self.currentPlayingPlaylistSongs();
+      let currentIndex = self.currentSongIndex();
+
+      if (
+        currentPlaylist.length > 0 &&
+        currentIndex >= 0 &&
+        currentIndex < currentPlaylist.length - 1
+      ) {
+        // まだプレイリストに次の曲がある場合
+        currentIndex++; // 次の曲のインデックスへ
+        self.currentSongIndex(currentIndex); // インデックスを更新
+        const nextSong = currentPlaylist[currentIndex]; // 次の曲データを取得
+        console.log("Playing next song in playlist:", nextSong);
+        self.loadAndPlay(nextSong, true); // 次の曲を再生 (第2引数trueでプレイリスト再生中と伝える)
+      } else {
+        // プレイリストの最後の曲が終わった、またはプレイリスト再生中でない場合
+        console.log("Playlist finished or not playing playlist.");
+        self.currentSong(null); // 現在の曲をクリア
+        self.currentPlayingPlaylistSongs([]); // 再生中リストをクリア
+        self.currentSongIndex(-1); // インデックスをリセット
+        // 必要ならプレイヤーの表示を初期状態に戻すなど
+      }
     });
 
     self.audioElement.addEventListener("timeupdate", function () {
@@ -63,8 +87,13 @@ function AppViewModel() {
   /**
    * Loads a song and starts playback.
    */
-  self.loadAndPlay = function (songData) {
-    console.log("Request to play song:", songData);
+  self.loadAndPlay = function (songData, isPlaylistTrack = false) {
+    console.log(
+      "Request to play song:",
+      songData,
+      "Is playlist track:",
+      isPlaylistTrack
+    );
     if (!self.audioElement) {
       console.error("Audio player not initialized.");
       return;
@@ -72,6 +101,13 @@ function AppViewModel() {
     if (!songData || !songData.file_path) {
       console.error("Invalid song data provided.");
       return;
+    }
+
+    if (!isPlaylistTrack) {
+      // ★ ここで isPlaylistTrack を参照している
+      self.currentPlayingPlaylistSongs([]);
+      self.currentSongIndex(-1);
+      console.log("Playlist playback state reset.");
     }
 
     self.currentSong(songData);
@@ -93,6 +129,25 @@ function AppViewModel() {
           alert("音声の再生を開始できませんでした。");
         });
     }
+  };
+
+  // --- ↓ プレイリスト全体の再生を開始するメソッドを追加 ↓ ---
+  self.playPlaylist = function () {
+    // 現在表示しているプレイリストの楽曲リストを取得
+    const songsToPlay = self.currentPlaylistSongs();
+    if (!songsToPlay || songsToPlay.length === 0) {
+      alert("このプレイリストには再生できる曲がありません。");
+      return;
+    }
+
+    console.log(`プレイリスト再生開始: 全 ${songsToPlay.length} 曲`);
+    // 再生中のプレイリスト情報をセット
+    self.currentPlayingPlaylistSongs(songsToPlay);
+    self.currentSongIndex(0); // 最初の曲から再生
+
+    // 最初の曲のデータを取得して再生開始
+    const firstSong = songsToPlay[0];
+    self.loadAndPlay(firstSong, true); // 既存のメソッドを呼び出す
   };
 
   /**

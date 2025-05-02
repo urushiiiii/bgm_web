@@ -6,7 +6,10 @@
     <p>作成日: <?php echo e(Date::forge(strtotime($playlist['created_at']))->format('%Y/%m/%d')); ?></p>
 
     <div>
-        <button type="button" id="play-playlist-button" data-playlist-id="<?php echo e($playlist['id']); ?>">▶ このプレイリストを再生</button> <?php // プレイリスト再生ボタン (機能は後で) ?>
+        <button type="button" id="play-playlist-button" data-playlist-id="<?php echo e($playlist['id']); ?>"
+                data-bind="click: playPlaylist, enable: currentPlaylistSongs().length > 0">
+            ▶ このプレイリストを再生
+        </button>
         <button type="button" id="add-song-to-playlist-button" data-playlist-id="<?php echo e($playlist['id']); ?>">楽曲を追加</button> <?php // 楽曲追加ボタン (機能は後で) ?>
          <?php // ↓ プレイリスト削除ボタンもここに追加 ↓ ?>
          <button type="button" class="delete-playlist-button"
