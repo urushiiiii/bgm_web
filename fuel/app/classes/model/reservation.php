@@ -5,35 +5,32 @@
 class Model_Reservation extends Model
 {
     /**
-     * 全ての予約情報をプレイリスト名付きで取得する
-     * (予約日時の昇順で取得)
-     *
-     * @return array 予約情報の配列
+     * 全ての予約情報をプレイリスト名付きで取得する (修正: playlist_idも取得)
      */
     public static function find_all_with_playlist_name()
     {
         try {
             $query = DB::select(
-                            'reservations.id', // 予約ID
-                            'reservations.reservation_datetime', // 予約日時
-                            'reservations.status', // 予約状態
+                            'reservations.id',
+                            'reservations.playlist_id', // ★ playlist_id を追加 ★
+                            'reservations.reservation_datetime',
+                            'reservations.status',
                             array('playlists.name', 'playlist_name'),
-                            'reservations.created_at', // 予約作成日時 (任意)
-                            'reservations.updated_at' // 予約更新日時 (任意)
+                            'reservations.created_at',
+                            'reservations.updated_at' // ★ updated_at を再度追加 ★ (予約編集機能で必要になるはず)
                         )
                         ->from('reservations')
-                        ->join('playlists', 'INNER') // playlists テーブルを内部結合
-                        ->on('reservations.playlist_id', '=', 'playlists.id') // playlist_id で結合
-                        ->order_by('reservations.reservation_datetime', 'asc'); // 予約日時の昇順
+                        ->join('playlists', 'INNER')
+                        ->on('reservations.playlist_id', '=', 'playlists.id')
+                        ->order_by('reservations.reservation_datetime', 'asc');
 
             return $query->execute()->as_array();
 
         } catch (\Database_Exception $e) {
             \Log::error('データベースエラー[予約一覧取得]: ' . $e->getMessage());
-            return array(); // エラー時は空配列
+            return array();
         }
     }
-
     /**
      * 新しい再生予約を作成する
      * @param int $playlist_id プレイリストID
@@ -205,6 +202,45 @@ class Model_Reservation extends Model
             if (strpos($e->getMessage(), 'Duplicate entry') !== false) {
                  return 'duplicate'; // UNIQUE制約違反の場合
             }
+            return false;
+        }
+    }
+    /**
+     * 指定されたIDの予約ステータスを更新する
+     * @param int $id 更新する予約のID
+     * @param string $status 新しいステータス ('played', 'canceled', 'dismissed' など)
+     * @return bool 成功時は true, 失敗時は false
+     */
+    public static function update_status($id, $status) // ★★★ このメソッドが存在するか確認 ★★★
+    {
+        // パラメータ検証
+        if (!ctype_digit((string)$id) || (int)$id <= 0 || empty($status)) {
+            \Log::warning('不正なパラメータが update_status に渡されました。', array('id' => $id, 'status' => $status));
+            return false;
+        }
+        $id = (int)$id;
+        // 有効なステータスかチェック (任意だが推奨)
+        $allowed_statuses = ['played', 'canceled', 'dismissed', 'reserved', 'error'];
+        if (!in_array($status, $allowed_statuses)) {
+             \Log::warning('許可されていないステータスです: ' . $status);
+             return false;
+        }
+
+        try {
+            // reservations テーブルの status カラムを更新
+            $rows_affected = DB::update('reservations')
+                                ->set(array(
+                                    'status' => $status,
+                                    // updated_at はDBで自動更新される
+                                ))
+                                ->where('id', '=', $id)
+                                ->execute();
+
+            // execute() はエラーがなければ影響行数を返す(0の場合もある)ので、ここでは例外が出なければ成功とする
+            return true;
+
+        } catch (\Database_Exception $e) {
+            \Log::error('データベースエラー[予約ステータス更新]: ' . $e->getMessage() . ' ID: ' . $id . ' Status: ' . $status);
             return false;
         }
     }

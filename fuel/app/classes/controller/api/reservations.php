@@ -180,5 +180,39 @@ class Controller_Api_Reservations extends Controller_Rest
             return \Response::forge(\Format::forge(array('success' => false, 'message' => '予約の更新中にエラーが発生しました。'))->to_json(), 500, array('Content-Type' => 'application/json'));
         }
     }
+    /**
+     * 指定されたIDの予約ステータスを更新する (POST /api/reservations/:id/status)
+     * @param int $id 更新する予約のID (URLから取得)
+     */
+    public function action_update_status($id = null) // POSTでステータスを受け取る想定
+    {
+        // IDチェック
+        if ($id === null || !ctype_digit((string)$id) || (int)$id <= 0) {
+             return \Response::forge(\Format::forge(array('success' => false, 'message' => '無効な予約IDです。'))->to_json(), 400, array('Content-Type' => 'application/json'));
+        }
+        $id = (int)$id;
+
+        // 新しいステータスをPOSTデータから取得 (例: 'status' というキー)
+        $new_status = \Input::json('status', null);
+        \Log::debug('Received status update request: ID=' . $id . ' Status=' . print_r($new_status, true)); // ← 配列を文字列化してから出力
+        if ($new_status === null) {
+            \Log::warning('ステータスがリクエストボディから取得できませんでした。');
+            return \Response::forge(\Format::forge(array('success' => false, 'message' => 'ステータスが指定されていません。'))->to_json(), 400, array('Content-Type' => 'application/json'));
+        }
+
+        // Modelを呼び出してステータスを更新
+        $result = Model_Reservation::update_status($id, $new_status);
+
+        if ($result) {
+            $response = array(
+                'success' => true,
+                'message' => '予約ステータスを更新しました。'
+            );
+            return \Response::forge(\Format::forge($response)->to_json(), 200, array('Content-Type' => 'application/json'));
+        } else {
+             // Model側で不正なステータス値などもチェックしている想定
+             return \Response::forge(\Format::forge(array('success' => false, 'message' => '予約ステータスの更新に失敗しました。'))->to_json(), 500, array('Content-Type' => 'application/json'));
+        }
+    }
 
 }

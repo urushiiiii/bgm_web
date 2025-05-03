@@ -53,20 +53,18 @@ class Controller_Api_Logs extends Controller_Rest
     /**
      * 再生ログを記録するアクション (POST /api/logs/play)
      */
-    public function post_play()
+    public function action_play()  // ★ メソッド名を action_play に変更 ★
     {
         // before() でチェック・取得済みの song_id を使う
+        // ★ 注意: before() が POST 専用チェックになっている点は留意 ★
         $song_id = $this->song_id_from_request;
 
-        // Modelを呼び出してログを記録
+        // Model呼び出しとレスポンス生成は変更なし
         $result = Model_PlayLog::record_log($song_id);
-
         if ($result) {
-            $response = array('success' => true, 'message' => '再生ログを記録しました。');
-            return $this->response($response, 201); // 201 Created (リソース作成成功)
+             return \Response::forge(\Format::forge(array('success' => true, 'message' => '再生ログを記録しました。'))->to_json(), 201, array('Content-Type' => 'application/json'));
         } else {
-            $response = array('success' => false, 'message' => '再生ログの記録に失敗しました。');
-            return $this->response($response, 500); // 500 Internal Server Error
+             return \Response::forge(\Format::forge(array('success' => false, 'message' => '再生ログの記録に失敗しました。'))->to_json(), 500, array('Content-Type' => 'application/json'));
         }
     }
 }

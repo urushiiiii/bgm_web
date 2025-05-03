@@ -23,6 +23,13 @@
     <?php // 自作のJavaScriptファイル (ViewModelなどを書く) を読み込む ?>
     <?php echo Asset::js('app.js'); ?>
 
+    <?php // --- ↓ 通知バナー表示エリアを追加 ↓ --- ?>
+    <div id="notification-banner" data-bind="if: currentNotification" style="background-color: lightblue; padding: 10px; text-align: center; border-bottom: 1px solid #ccc;">
+        <span>予約時間です！ プレイリスト「<strong data-bind="text: currentNotification().playlist_name"></strong>」</span>
+        <button type="button" data-bind="click: playFromNotification">再生</button>
+        <button type="button" data-bind="click: dismissNotification" style="margin-left: 10px;">閉じる</button>
+    </div>
+
 </head>
 <body>
 

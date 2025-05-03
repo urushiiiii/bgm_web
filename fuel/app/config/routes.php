@@ -2,7 +2,7 @@
 return array(
     '_root_'  => 'home/index',
     '_404_'   => 'welcome/404',
-    'hello(/:name)?' => array('welcome/hello', 'name' => 'hello'),
+    //'hello(/:name)?' => array('welcome/hello', 'name' => 'hello'),
     'songs' => 'songs/index',
     'api/songs/upload' => 'api/songs/upload',
     'api/playlists/create' => 'api/playlists/create',
@@ -18,6 +18,7 @@ return array(
     'api/reservations' => 'api/reservations/index',        // ★ GET /api/reservations → Controller_Api_Reservations@get_index (一覧取得)
     'api/reservations/create' => 'api/reservations/create', // ★ POST /api/reservations/create → Controller_Api_Reservations@post_create (作成)
     'api/reservations/delete/:id' => 'api/reservations/delete/$1',
-    'api/reservations/:id' => array(array('GET', 'api/reservations/reservation/$1')), // GET /api/reservations/(id) を Controller_Api_Reservations@get_reservation(id) へ
+    'api/reservations/detail/:id' => 'api/reservations/reservation/$1', // GET /api/reservations/(id) を Controller_Api_Reservations@get_reservation(id) へ
     'api/reservations/update/:id' => 'api/reservations/update/$1', // POST /api/reservations/update/(id) を Controller_Api_Reservations@post_update(id) へ
+    'api/reservations/:id/status' => 'api/reservations/update_status/$1'
 );
