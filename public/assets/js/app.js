@@ -102,6 +102,45 @@ function AppViewModel() {
       // TODO: Display song duration if needed
     });
 
+    /**
+     * 指定された曲データが、現在ロードされている曲と同じかどうかを判定する
+     * @param {object} songData - リスト内の楽曲データ {id, ...}
+     * @returns {boolean}
+     */
+    self.isCurrentSong = function (songData) {
+      const current = self.currentSong();
+      // 現在ロードされている曲があり、かつIDが一致するかどうか
+      return current && songData && current.id === songData.id;
+    };
+
+    /**
+     * 指定された曲データが、現在再生中(一時停止ではなく)かどうかを判定する
+     * @param {object} songData - リスト内の楽曲データ {id, ...}
+     * @returns {boolean}
+     */
+    self.isCurrentlyPlaying = function (songData) {
+      // 現在ロード中の曲と同じで、かつ再生中(isPlayingがtrue)か
+      return self.isCurrentSong(songData) && self.isPlaying();
+    };
+
+    /**
+     * リスト内の再生/一時停止ボタンがクリックされたときに呼び出されるメソッド
+     * @param {object} songData - クリックされた行の楽曲データ
+     */
+    self.togglePlayPauseList = function (songData) {
+      console.log("List togglePlayPause called for:", songData.name);
+      if (self.isCurrentlyPlaying(songData)) {
+        // ★ もし再生中の曲の「一時停止」ボタンが押されたら -> 一時停止する
+        self.pauseSong();
+      } else if (self.isCurrentSong(songData)) {
+        // ★ もし一時停止中の曲の「再生」ボタンが押されたら -> 再開する
+        self.resumeSong();
+      } else {
+        // ★ もしまだ再生されていない曲の「再生」ボタンが押されたら -> 新しく再生する
+        self.loadAndPlay(songData); // isPlaylistTrack は false (デフォルト)
+      }
+    };
+
     // ★★★ (任意) ブラウザ標準コントロール等で音量が変更された場合にViewModelに反映 ★★★
     self.audioElement.addEventListener("volumechange", function () {
       if (
@@ -678,7 +717,7 @@ function AppViewModel() {
     }
     // エラーメッセージもクリア
     const reservationStatusDiv = document.getElementById("reservation-status");
-    if (reservationStatusDiv) reservationStatusDiv.textContent = "";
+    //if (reservationStatusDiv) reservationStatusDiv.textContent = "";
   };
 
   // 編集ボタンがクリックされたときに呼び出されるメソッド
@@ -1066,13 +1105,11 @@ document.addEventListener("DOMContentLoaded", function () {
         .then((response) => {
           // レスポンス処理
           // エラーレスポンスも含めてJSONとして解析試行
-          return response
-            .json()
-            .then((data) => ({
-              ok: response.ok,
-              status: response.status,
-              data: data,
-            }));
+          return response.json().then((data) => ({
+            ok: response.ok,
+            status: response.status,
+            data: data,
+          }));
         })
         .then((result) => {
           // 結果処理
@@ -1218,12 +1255,36 @@ document.addEventListener("DOMContentLoaded", function () {
         })
         .then((data) => {
           if (data.success) {
-            /* ... Success message, close modal ... */ appViewModel.loadCurrentPlaylistSongs(
-              currentPlaylistId
-            );
-          } // Refresh list
-          else {
-            /* ... Error display ... */
+            // ★★★ API成功時の処理をしっかり記述 ★★★
+            // 1. 成功メッセージを表示
+            addSongStatusDiv.textContent = `成功: ${
+              data.message || "楽曲を追加しました。"
+            }`;
+            addSongStatusDiv.style.color = "green";
+
+            // 2. プレイリスト一覧を再読み込みして更新
+            console.log("楽曲追加成功、リストを再読み込みします。");
+            appViewModel.loadCurrentPlaylistSongs(currentPlaylistId); // ViewModelのメソッド呼び出し
+
+            // 3. 少し待ってからモーダルを閉じ、メッセージもクリアする
+            setTimeout(() => {
+              addSongModal.style.display = "none"; // モーダルを非表示
+              addSongStatusDiv.textContent = ""; // メッセージをクリア
+            }, 1500); // 1.5秒後に実行する例 (時間は調整可)
+          } else {
+            // API失敗時の処理 (変更なし)
+            addSongStatusDiv.textContent = `エラー (${result.status}): ${
+              data.message || "不明なエラー"
+            }`; // result変数がないのでdataを使うべき
+            addSongStatusDiv.style.color = "red";
+            // エラーメッセージを5秒後に消す (任意)
+            setTimeout(() => {
+              if (
+                addSongStatusDiv.textContent ===
+                `エラー (${result.status}): ${data.message || "不明なエラー"}`
+              )
+                addSongStatusDiv.textContent = "";
+            }, 5000);
           }
         })
         .catch((error) => {

@@ -20,7 +20,10 @@
             <?php /* 日付のフォーマットはViewModel側で行うか、カスタムバインディングを使うのがよりKnockoutらしい */ ?>
             <td data-bind="text: new Date(created_at).toLocaleString()"></td> <?php // 簡単な表示例 ?>
             <td>
-                <button type="button" class="play-button" data-bind="click: $root.loadAndPlay">▶ 再生</button>
+            <button type="button" class="play-button"
+            data-bind="click: $root.togglePlayPauseList, <?php // ← 呼び出すメソッドを変更 ?>
+                       text: $root.isCurrentlyPlaying($data) ? '⏸' : '▶', <?php // ← 表示テキストを判定メソッドで変更 ?>
+                       attr: {'data-song-id': id}">
             </td>
         </tr>
     </tbody>
