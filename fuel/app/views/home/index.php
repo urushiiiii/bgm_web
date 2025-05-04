@@ -1,5 +1,4 @@
 <h2>ホーム (全体ページ)</h2>
-<p>ここに全体ページのコンテンツが表示されます。</p>
 
 <sction>
     <h3>楽曲</h3>
@@ -12,12 +11,18 @@
 <section>
     <h3>プレイリスト一覧</h3>
     <ul id="playlist-list" style="margin-top: 10px;">
-        <?php if (isset($playlists) && !empty($playlists)): ?>
-            <?php foreach ($playlists as $playlist): ?>
-                <li>
-                    <a href="<?php echo Uri::create('playlist/view/' . e($playlist['id'])); ?>">
-                        <?php echo e($playlist['name']); ?>
-                    </a>
+    <?php if (isset($playlists) && !empty($playlists)): ?>
+        <?php // ★ Controllerから渡されたIDを取得 (0より大きい場合のみ有効とみなす) ★ ?>
+        <?php $last_viewed_id = (isset($last_viewed_playlist_id) && $last_viewed_playlist_id > 0) ? $last_viewed_playlist_id : null; ?>
+
+        <?php foreach ($playlists as $playlist): ?>
+            <?php // ★ $last_viewed_id が null でない場合のみ比較 ★ ?>
+            <li <?php if ($last_viewed_id !== null && $playlist['id'] == $last_viewed_id): ?> style="font-weight: bold;" <?php endif; ?>>
+                <a href="<?php echo Uri::create('playlist/view/' . e($playlist['id'])); ?>">
+                    <?php echo e($playlist['name']); ?>
+                     <?php if ($last_viewed_id !== null && $playlist['id'] == $last_viewed_id): ?> (← recently viewed) <?php endif; ?>
+                </a>
+                    (作成日: <?php echo e(Date::forge(strtotime($playlist['created_at']))->format('%Y/%m/%d')); ?>)
                 </li>
             <?php endforeach; ?>
         <?php else: ?>
@@ -25,10 +30,10 @@
         <?php endif; ?>
     </ul>
     <button type="button" id="create-playlist-button">新しいプレイリストを作成する</button>
+    <span id="create-playlist-status" style="margin-left: 10px; font-weight: bold;"></span>
     <div id="create-playlist-form" style="display: none; margin-top: 10px;">
         <input type="text" id="new-playlist-name" placeholder="新しいプレイリスト名">
         <button type="button" id="submit-playlist-button">作成</button>
-        <span id="create-playlist-status"></span>
     </div>
 </section>
 

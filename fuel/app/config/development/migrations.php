@@ -13,6 +13,7 @@ return array(
         4 => '004_create_reservations',
         5 => '005_create_play_logs',
         6 => '006_add_foreign_keys',
+        7 => '007_add_unique_to_playlists_name',
       ),
     ),
     'module' => 

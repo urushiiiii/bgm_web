@@ -77,6 +77,12 @@ class Controller_Home extends Controller_Template
             $data['pagination_links_html'] = '<p style="color:red;">ログ表示中にエラーが発生しました。</p>'; // エラーメッセージ
         }
 
+        // ★★★ Sessionから最後に見たプレイリストIDを取得し、nullの場合は 0 をセット ★★★
+        $last_viewed_id_from_session = \Session::get('last_viewed_playlist_id', null);
+        // View に渡す $data には、null ではなく 0 (または -1 など) を入れる
+        $data['last_viewed_playlist_id'] = ($last_viewed_id_from_session === null) ? 0 : (int)$last_viewed_id_from_session;
+        \Log::debug('[Session Debug] Get last_viewed_playlist_id (set to 0 if null): ' . $data['last_viewed_playlist_id']);
+
         // --- ④ View を設定 ---
         $this->template->title = 'BGMアプリ - ホーム';
         // $data 配列（playlists, logs, pagination_links_html などを含む）を View に渡す

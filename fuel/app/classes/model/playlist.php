@@ -49,7 +49,10 @@ class Model_Playlist extends Model
         } catch (\Database_Exception $e) {
             // Database_Exception を捕捉 (UNIQUE制約違反などもここで捕捉される)
             \Log::error('データベースエラー[プレイリスト作成]: ' . $e->getMessage() . ' Name: ' . $name);
-            return false; // 失敗
+            if ($e->getCode() == 23000 || strpos(strtolower($e->getMessage()), 'duplicate entry') !== false || strpos(strtolower($e->getMessage()), '1062') !== false) {
+                return 'duplicate'; // ★ 重複を示す特別な文字列を返す ★
+            }
+            return false;
         }
     }
 

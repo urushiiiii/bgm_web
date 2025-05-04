@@ -38,6 +38,8 @@ function AppViewModel() {
   self.currentNotification = ko.observable(null); // 表示する通知データ {id, playlist_name, reservation_datetime}
   self.reservationCheckInterval = null; // setIntervalのIDを保持する用
 
+  self.currentVolume = ko.observable(0.8); // 0.0 から 1.0 の値。デフォルト80%
+
   /**
    * Initializes the HTML audio element and sets up event listeners.
    */
@@ -48,6 +50,10 @@ function AppViewModel() {
     }
     self.audioElement = audioElement;
     console.log("Audio player initialized with element:", self.audioElement);
+
+    // ★★★ 初期音量をViewModelの値で設定 ★★★
+    self.audioElement.volume = self.currentVolume();
+    console.log("Initial audio volume set to:", self.audioElement.volume);
 
     self.audioElement.addEventListener("ended", function () {
       console.log("Audio ended");
@@ -94,6 +100,20 @@ function AppViewModel() {
       if (!self.audioElement) return;
       console.log("Audio can play. Duration:", self.audioElement.duration);
       // TODO: Display song duration if needed
+    });
+
+    // ★★★ (任意) ブラウザ標準コントロール等で音量が変更された場合にViewModelに反映 ★★★
+    self.audioElement.addEventListener("volumechange", function () {
+      if (
+        self.audioElement &&
+        self.currentVolume() !== self.audioElement.volume
+      ) {
+        console.log(
+          "Audio volume changed externally, updating ViewModel:",
+          self.audioElement.volume
+        );
+        self.currentVolume(self.audioElement.volume); // ViewModelを更新 (これによりCookieも更新される)
+      }
     });
   };
 
@@ -826,6 +846,18 @@ function AppViewModel() {
   self.initialize = function () {
     // ページ読み込み時に実行したい処理
     console.log("ViewModel Initializing...");
+    // --- ↓ Cookieから音量を読み込む処理を追加 ↓ ---
+    const savedVolume = getCookie("player_volume"); // 'player_volume' という名前で保存/読み込み
+    if (savedVolume !== null && !isNaN(parseFloat(savedVolume))) {
+      let volumeValue = parseFloat(savedVolume);
+      // 値の範囲を 0.0 ～ 1.0 に補正
+      volumeValue = Math.max(0, Math.min(1, volumeValue));
+      self.currentVolume(volumeValue); // ViewModelのobservableを更新
+      console.log("Saved volume loaded from cookie:", volumeValue);
+    } else {
+      console.log("No saved volume found in cookie or invalid value.");
+      // Cookieがない場合はデフォルト値(0.8)が使われる
+    }
     // 定期的に予約をチェックするタイマーを開始 (例: 60秒ごと)
     self.reservationCheckInterval = setInterval(
       self.checkReservations,
@@ -836,6 +868,17 @@ function AppViewModel() {
 
     // ページ種別に応じて初期データを読み込む (これはDOMContentLoadedに移動)
   };
+
+  self.currentVolume.subscribe(function (newVolume) {
+    console.log("Volume changed via ViewModel:", newVolume);
+    // <audio> 要素の音量を更新
+    if (self.audioElement) {
+      self.audioElement.volume = newVolume;
+    }
+    // Cookieに新しい音量値を保存 (有効期間1年)
+    setCookie("player_volume", newVolume, 365);
+    console.log("Volume saved to cookie.");
+  });
 } // --- End of AppViewModel ---
 
 /**
@@ -873,6 +916,39 @@ function uploadFile(file) {
     });
 }
 
+/**
+ * Cookieを設定する関数
+ * @param {string} name - Cookie名
+ * @param {string} value - 設定する値
+ * @param {number} days - 有効日数 (省略時はセッションCookie)
+ */
+function setCookie(name, value, days) {
+  var expires = "";
+  if (days) {
+    var date = new Date();
+    date.setTime(date.getTime() + days * 24 * 60 * 60 * 1000);
+    expires = "; expires=" + date.toUTCString();
+  }
+  document.cookie =
+    name + "=" + (value || "") + expires + "; path=/; SameSite=Lax"; // パスとSameSite属性も指定推奨
+}
+
+/**
+ * 指定された名前のCookieを取得する関数
+ * @param {string} name - Cookie名
+ * @return {string|null} Cookieの値、存在しない場合は null
+ */
+function getCookie(name) {
+  var nameEQ = name + "=";
+  var ca = document.cookie.split(";");
+  for (var i = 0; i < ca.length; i++) {
+    var c = ca[i];
+    while (c.charAt(0) == " ") c = c.substring(1, c.length);
+    if (c.indexOf(nameEQ) == 0) return c.substring(nameEQ.length, c.length);
+  }
+  return null;
+}
+
 // ★★★ Execute when the HTML document is fully loaded ★★★
 document.addEventListener("DOMContentLoaded", function () {
   // --- ① Initialize ViewModel and apply Knockout bindings ---
@@ -908,7 +984,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  // --- ③ Playlist Creation Event Listeners ---
+  // --- ③ プレイリスト作成関連のイベントリスナー設定 ---
   const createPlaylistButton = document.getElementById(
     "create-playlist-button"
   );
@@ -917,81 +993,106 @@ document.addEventListener("DOMContentLoaded", function () {
     "submit-playlist-button"
   );
   const newPlaylistNameInput = document.getElementById("new-playlist-name");
+  // ★ メッセージ表示用のspanを取得 (フォームの外にある想定)
   const createPlaylistStatusSpan = document.getElementById(
     "create-playlist-status"
   );
-  const playlistListUl = document.getElementById("playlist-list"); // Main page list
-  if (createPlaylistButton && createPlaylistForm) {
-    /* ... Toggle form ... */ createPlaylistButton.addEventListener(
-      "click",
-      () =>
-        (createPlaylistForm.style.display =
-          createPlaylistForm.style.display === "none" ||
-          createPlaylistForm.style.display === ""
-            ? "block"
-            : "none")
-    );
+  const playlistListUl = document.getElementById("playlist-list"); // 一覧表示用のul
+
+  // 「新しいプレイリストを作成する」ボタンのクリックイベント
+  if (
+    createPlaylistButton &&
+    createPlaylistForm &&
+    createPlaylistStatusSpan &&
+    newPlaylistNameInput
+  ) {
+    createPlaylistButton.addEventListener("click", function () {
+      // フォームの表示/非表示を切り替え
+      const isHidden =
+        createPlaylistForm.style.display === "none" ||
+        createPlaylistForm.style.display === "";
+      createPlaylistForm.style.display = isHidden ? "block" : "none";
+
+      // ★ フォームが表示されるタイミングで実行する処理 ★
+      if (isHidden) {
+        createPlaylistStatusSpan.textContent = ""; // ★ 前回のメッセージをクリア
+        newPlaylistNameInput.value = ""; // ★ 入力欄をクリア
+        newPlaylistNameInput.focus(); // ★ 入力欄にフォーカスを当てる (任意)
+      }
+    });
   }
+
+  // 「作成」ボタン（フォームの中）のクリックイベント
   if (
     submitPlaylistButton &&
     newPlaylistNameInput &&
     createPlaylistStatusSpan &&
-    playlistListUl
+    playlistListUl &&
+    createPlaylistForm
   ) {
     submitPlaylistButton.addEventListener("click", function () {
-      // ★★★ ここから下が消えてしまったコード ★★★
-      const playlistName = newPlaylistNameInput.value.trim(); // 入力値を取得し、前後の空白を削除
+      const playlistName = newPlaylistNameInput.value.trim(); // 入力値を取得
 
+      // バリデーション: 名前が空でないか
       if (playlistName === "") {
         createPlaylistStatusSpan.textContent =
           "プレイリスト名を入力してください。";
         createPlaylistStatusSpan.style.color = "red";
-        return; // 名前が空なら何もしない
+        // 3秒後にエラーメッセージを消す (任意)
+        setTimeout(() => {
+          if (
+            createPlaylistStatusSpan.textContent ===
+            "プレイリスト名を入力してください。"
+          )
+            createPlaylistStatusSpan.textContent = "";
+        }, 3000);
+        return; // 処理中断
       }
 
+      // API呼び出し中の表示とボタン無効化
       createPlaylistStatusSpan.textContent = "作成中...";
-      createPlaylistStatusSpan.style.color = "black";
-      submitPlaylistButton.disabled = true; // 連打防止
+      createPlaylistStatusSpan.style.color = "black"; // メッセージ色をリセット
+      submitPlaylistButton.disabled = true;
 
-      // FormDataオブジェクトを作成し、名前を追加
+      // 送信するデータ準備 (FormData)
       const formData = new FormData();
       formData.append("name", playlistName);
 
-      // fetch APIでプレイリスト作成APIにPOSTリクエストを送信
+      // プレイリスト作成API (POST /api/playlists/create) を呼び出し
       fetch("/api/playlists/create", {
         method: "POST",
         body: formData,
       })
         .then((response) => {
-          if (!response.ok) {
-            // エラーレスポンスの場合
-            return response
-              .json()
-              .catch(() => {
-                throw new Error(`HTTP error! status: ${response.status}`);
-              })
-              .then((errData) => {
-                throw { status: response.status, data: errData };
-              });
-          }
-          return response.json(); // 成功レスポンスをJSONで取得
+          // レスポンス処理
+          // エラーレスポンスも含めてJSONとして解析試行
+          return response
+            .json()
+            .then((data) => ({
+              ok: response.ok,
+              status: response.status,
+              data: data,
+            }));
         })
-        .then((data) => {
-          console.log("プレイリスト作成応答:", data);
-          if (data.success) {
-            createPlaylistStatusSpan.textContent = data.message;
+        .then((result) => {
+          // 結果処理
+          console.log("プレイリスト作成応答:", result);
+          if (result.ok) {
+            // API成功 (HTTP 201 Created を想定)
+            createPlaylistStatusSpan.textContent = result.data.message; // 成功メッセージ表示
             createPlaylistStatusSpan.style.color = "green";
-            newPlaylistNameInput.value = ""; // 入力欄をクリア
-            createPlaylistForm.style.display = "none"; // フォームを隠す
+            newPlaylistNameInput.value = ""; // 入力欄クリア
+            createPlaylistForm.style.display = "none"; // ★ フォームは成功時に閉じる
 
             // ★★★ プレイリスト一覧の動的更新 (DOM操作) ★★★
             const newListItem = document.createElement("li");
             const newLink = document.createElement("a");
-            newLink.href = `/playlist/view/${data.playlist.id}`; // サーバーから返されたIDを使う
-            newLink.textContent = data.playlist.name; // サーバーから返された名前を使う
+            // リンク先URLを正しく生成 (要件に合わせて調整)
+            newLink.href = "/playlist/view/" + result.data.playlist.id; // ControllerからのIDを使用
+            newLink.textContent = result.data.playlist.name; // Controllerからの名前を使用
             const dateSpan = document.createElement("span");
-            // サーバーから created_at が返ってくるならそれを使うのが望ましい
-            dateSpan.textContent = ` (作成日: ${new Date().toLocaleDateString()})`; // 仮の日付表示
+            // 作成日は new Date() だとズレるので、サーバーから返してもらうか、ここでは表示しない方が良いかも
+            dateSpan.textContent = ` (作成日: ${new Date().toLocaleDateString()})`; // 仮表示
             newListItem.appendChild(newLink);
             newListItem.appendChild(dateSpan);
 
@@ -1003,32 +1104,54 @@ document.addEventListener("DOMContentLoaded", function () {
             ) {
               playlistListUl.innerHTML = ""; // 中身を一旦空にする
             }
-
             playlistListUl.appendChild(newListItem); // 新しい項目をリストに追加
             // ★★★ ここまで ★★★
+
+            // 成功メッセージを3秒後に消す
+            setTimeout(() => {
+              if (createPlaylistStatusSpan.textContent === result.data.message)
+                createPlaylistStatusSpan.textContent = "";
+            }, 3000);
           } else {
-            // 作成失敗 (名前重複など)
-            createPlaylistStatusSpan.textContent = `エラー: ${data.message}`;
+            // API失敗 (HTTP 4xx, 5xx - 例: 409 Conflict)
+            createPlaylistStatusSpan.textContent = `エラー: ${
+              result.data.message || "不明なエラー"
+            }`; // サーバーからのメッセージを表示
             createPlaylistStatusSpan.style.color = "red";
+            // ★ エラー時はフォームを閉じない ★
+            // エラーメッセージを5秒後に消す (任意)
+            setTimeout(() => {
+              if (
+                createPlaylistStatusSpan.textContent ===
+                `エラー: ${result.data.message || "不明なエラー"}`
+              )
+                createPlaylistStatusSpan.textContent = "";
+            }, 5000);
           }
         })
         .catch((error) => {
+          // 通信エラーなど fetch 自体の失敗
           console.error("プレイリスト作成エラー:", error);
-          let errorMessage = "作成中にエラーが発生しました。";
-          if (error.data && error.data.message) {
-            errorMessage = error.data.message;
-          } else if (error.message) {
-            errorMessage = error.message;
-          }
-          createPlaylistStatusSpan.textContent = `エラー: ${errorMessage}`;
+          createPlaylistStatusSpan.textContent = `エラー: ${
+            error.message || "通信に失敗しました。"
+          }`;
           createPlaylistStatusSpan.style.color = "red";
+          // エラーメッセージを5秒後に消す (任意)
+          setTimeout(() => {
+            if (
+              createPlaylistStatusSpan.textContent ===
+              `エラー: ${error.message || "通信に失敗しました。"}`
+            )
+              createPlaylistStatusSpan.textContent = "";
+          }, 5000);
         })
         .finally(() => {
-          // 成功・失敗に関わらず、ボタンを再度有効化
-          submitPlaylistButton.disabled = false;
+          // 成功・失敗に関わらず最後に実行
+          submitPlaylistButton.disabled = false; // ボタンを再度有効化
         });
     });
   }
+  // --- ↑ ここまでプレイリスト作成関連 ↑ ---
 
   // --- ④ Playlist Detail Page - Add Song Modal Event Listeners ---
   const addSongToPlaylistButton = document.getElementById(

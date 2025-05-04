@@ -59,7 +59,11 @@
             </button>
             <span style="margin-left: 15px;">再生中:</span>
             <span data-bind="text: currentSong() ? currentSong().name : '---'"></span> <?php // Knockoutの currentSong の name を表示 ?>
-                <?php // ここに後でプログレスバーや音量調整などを追加 ?>
+            <?php // --- ↓ 音量調整スライダーを追加 ↓ --- ?>
+                <span style="margin-left: 30px;">音量:</span>
+                <input type="range" id="volume-slider" min="0" max="1" step="0.05"
+                        data-bind="value: currentVolume, valueUpdate: 'input'">
+                <span data-bind="text: Math.round(currentVolume() * 100) + '%'"></span> <?php // 現在の音量を%表示 (任意) ?>
         </div>
         <p style="text-align: center; margin-top: 5px;">&copy; <?php echo date('Y'); ?> Your Name or App Name</p> <?php // コピーライトも中央揃えに(例) ?>
     </footer>

@@ -6,41 +6,37 @@ class Controller_Api_Playlists extends Controller_Rest
 
     public function post_create()
     {
-        $playlist_name_raw = \Input::post('name', null); // デフォルト値nullを指定
-
-        // POSTされたデータを取得し、前後の空白を削除
-        $playlist_name = trim($playlist_name_raw);
-
-        // 簡単なバリデーション (名前が空でないか)
+        $playlist_name = trim(\Input::post('name', null));
         if (empty($playlist_name)) {
-            return \Response::forge(\Format::forge(array(
-                'success' => false,
-                'message' => 'プレイリスト名を入力してください。'
-            ))->to_json(), 400, array('Content-Type' => 'application/json'));
+            return \Response::forge(\Format::forge(array('success' => false, 'message' => 'プレイリスト名を入力してください。'))->to_json(), 400, array('Content-Type' => 'application/json'));
         }
 
-        // Modelを呼び出してプレイリスト作成を試みる
-        $playlist_id = Model_Playlist::create_playlist($playlist_name); // Modelには trim 済みの値を渡す
+        $result = Model_Playlist::create_playlist($playlist_name);
 
-        // ... (以降の成功・失敗レスポンス処理は変更なし) ...
-         if ($playlist_id !== false) {
-             // 作成成功
-             $response = array(
-                 'success' => true,
-                 'message' => 'プレイリストを作成しました。',
-                 'playlist' => array(
-                     'id' => $playlist_id,
-                     'name' => $playlist_name, // trim済みの名前を返す
-                 )
-             );
-             return \Response::forge(\Format::forge($response)->to_json(), 201, array('Content-Type' => 'application/json'));
-         } else {
-             // 作成失敗 (名前重複の可能性が高い)
-             return \Response::forge(\Format::forge(array(
-                 'success' => false,
-                 'message' => 'プレイリストの作成に失敗しました。同じ名前のプレイリストが既に存在する可能性があります。'
-             ))->to_json(), 409, array('Content-Type' => 'application/json'));
-         }
+        // ★★★ Modelからの返り値 ($result) で処理を分岐 ★★★
+        if ($result === 'duplicate') {
+            // ---- 重複エラーの場合 ----
+            return \Response::forge(\Format::forge(array(
+                'success' => false,
+                'message' => '同じ名前のプレイリストが既に存在します。' // ★ 明確なエラーメッセージ ★
+            ))->to_json(), 409, array('Content-Type' => 'application/json')); // ★ 409 Conflict ★
+
+        } elseif ($result !== false && is_int($result)) {
+            // ---- 作成成功の場合 ($result は新しい playlist_id) ----
+            $response = array(
+                'success' => true,
+                'message' => 'プレイリストを作成しました。',
+                'playlist' => array( 'id' => $result, 'name' => $playlist_name )
+            );
+            return \Response::forge(\Format::forge($response)->to_json(), 201, array('Content-Type' => 'application/json')); // 201 Created
+
+        } else {
+            // ---- その他の作成失敗の場合 (Modelがfalseを返した) ----
+            return \Response::forge(\Format::forge(array(
+                'success' => false,
+                'message' => 'プレイリストの作成中に予期せぬエラーが発生しました。'
+            ))->to_json(), 500, array('Content-Type' => 'application/json')); // 500 Internal Server Error
+        }
     }
     public function post_songs($playlist_id = null)
     {

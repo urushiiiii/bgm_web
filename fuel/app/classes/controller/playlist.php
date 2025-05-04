@@ -17,6 +17,9 @@ class Controller_Playlist extends Controller_Template // 共通レイアウト�
              \Log::warning('不正なプレイリストIDが指定されました。ID: ' . $id);
              throw new HttpNotFoundException; // 404エラーを発生させる
         }
+        // ★★★ Sessionに表示したプレイリストIDを保存 ★★★
+        \Session::set('last_viewed_playlist_id', $id);
+        \Log::debug('Sessionに保存: last_viewed_playlist_id = ' . $id); // ログ確認用
 
         // --- 2. Model を呼び出してデータを取得 ---
         $playlist_data = Model_Playlist::find_details((int)$id); // IDを整数にキャスト
