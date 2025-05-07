@@ -1,47 +1,50 @@
 // public/assets/js/app.js
 
 /**
- * Knockout.js ViewModel Definition for the BGM Application
+ * Knockout.js ViewModel
  */
 function AppViewModel() {
-  var self = this; // Standard convention for Knockout ViewModels
+  var self = this;
 
-  // --- Observables for UI State & Data ---
-  self.isPlaying = ko.observable(false); // Is audio currently playing?
-  self.currentSong = ko.observable(null); // The song object currently loaded/playing {id, name, file_path}
-  self.allSongs = ko.observableArray([]); // List of all songs for the "Add Song" modal
-  self.currentPlaylistSongs = ko.observableArray([]); // List of songs in the currently viewed playlist
-  self.currentPlaylistId = ko.observable(null); // ID of the currently viewed playlist
-  self.songsList = ko.observableArray([]); // List of songs for the main song list page
+  // --- 楽曲一覧表示 ---
+  self.songsList = ko.observableArray([]); // 楽曲一覧データ用
+  self.loadingSongsListError = ko.observable(null); // 楽曲一覧取得エラー表示用
+  self.allSongs = ko.observableArray([]); // モーダル用全曲リスト
 
-  // --- Loading/Error Status Observables ---
-  self.allSongsLoaded = ko.observable(false); // Flag: Have all songs been loaded?
-  self.loadingSongsError = ko.observable(null); // Error message when loading all songs
-  self.loadingPlaylistError = ko.observable(null); // Error message when loading playlist songs
-  self.loadingSongsListError = ko.observable(null); // Error message when loading the main song list
-
-  // --- Audio Player Reference ---
-  self.audioElement = null; // Reference to the HTML <audio> element
-
-  self.currentPlayingPlaylistSongs = ko.observableArray([]); // 現在再生中のプレイリストの曲リスト
+  // --- 再生関連プロパティ ---
+  self.isPlaying = ko.observable(false); // 再生中かどうか
+  self.currentSong = ko.observable(null); // 現在再生中の楽曲
+  self.currentPlaylistSongs = ko.observableArray([]); // プレイリスト再生用
+  self.currentVolume = ko.observable(0.8); // オーディオの音量
+  self.audioElement = null; // HTMLのオーディオ要素
   self.currentSongIndex = ko.observable(-1); // 再生中の曲のインデックス (-1 はプレイリスト再生中でない)
 
-  // --- ↓ 予約用プレイリスト選択肢を追加 ↓ ---
+  // --- Session ---
+  self.currentPlaylistId = ko.observable(null); // 直前で閲覧したプレイリストのID
+
+  // --- Loading/Error Status Observables ---
+  self.allSongsLoaded = ko.observable(false); // すべての楽曲がロードされたか確認
+  self.loadingSongsError = ko.observable(null); // 楽曲取得エラーメッセージ
+  self.loadingPlaylistError = ko.observable(null); // プレイリスト楽曲取得エラーメッセージ
+
+  // --- オーディオプレイヤー ---
+  self.currentPlayingPlaylistSongs = ko.observableArray([]); // 現在再生中のプレイリストの曲リスト
+
+  // --- 予約用プレイリスト選択肢を追加 ---
   self.availablePlaylists = ko.observableArray([]); // モーダル用プレイリストリスト
-  self.loadingAvailablePlaylistsError = ko.observable(null);
-  self.selectedPlaylistId = ko.observable(null); // ★ 予約フォームで選択されたIDを保持する用も追加
+  self.loadingAvailablePlaylistsError = ko.observable(null); //予約用プレイリストエラーメッセージ
+  self.selectedPlaylistId = ko.observable(null); // 予約フォームで選択されたIDを保持する用も追加
 
+  // --- 予約表示 ---
   self.reservations = ko.observableArray([]); // 全体ページに表示する予約リスト
-  self.loadingReservationsError = ko.observable(null);
+  self.loadingReservationsError = ko.observable(null); //予約取得エラーメッセージ用
 
-  // --- ↓ 予約通知用のプロパティとメソッドを追加 ↓ ---
+  // --- 予約通知用のプロパティとメソッドを追加 ---
   self.currentNotification = ko.observable(null); // 表示する通知データ {id, playlist_name, reservation_datetime}
   self.reservationCheckInterval = null; // setIntervalのIDを保持する用
 
-  self.currentVolume = ko.observable(0.8); // 0.0 から 1.0 の値。デフォルト80%
-
   /**
-   * Initializes the HTML audio element and sets up event listeners.
+   * オーディオ要素の初期化とイベントリスナー設定
    */
   self.initAudioPlayer = function (audioElement) {
     if (!audioElement) {
@@ -51,10 +54,10 @@ function AppViewModel() {
     self.audioElement = audioElement;
     console.log("Audio player initialized with element:", self.audioElement);
 
-    // ★★★ 初期音量をViewModelの値で設定 ★★★
+    //　初期音量をViewModelの値で設定
     self.audioElement.volume = self.currentVolume();
     console.log("Initial audio volume set to:", self.audioElement.volume);
-
+    //　曲の再生が最後まで終わったとき
     self.audioElement.addEventListener("ended", function () {
       console.log("Audio ended");
       self.isPlaying(false); // まず再生状態をfalseに
@@ -69,26 +72,21 @@ function AppViewModel() {
         currentIndex < currentPlaylist.length - 1
       ) {
         // まだプレイリストに次の曲がある場合
-        currentIndex++; // 次の曲のインデックスへ
-        self.currentSongIndex(currentIndex); // インデックスを更新
-        const nextSong = currentPlaylist[currentIndex]; // 次の曲データを取得
+        currentIndex++;
+        self.currentSongIndex(currentIndex);
+        const nextSong = currentPlaylist[currentIndex];
         console.log("Playing next song in playlist:", nextSong);
-        self.loadAndPlay(nextSong, true); // 次の曲を再生 (第2引数trueでプレイリスト再生中と伝える)
+        self.loadAndPlay(nextSong, true);
       } else {
         // プレイリストの最後の曲が終わった、またはプレイリスト再生中でない場合
         console.log("Playlist finished or not playing playlist.");
-        self.currentSong(null); // 現在の曲をクリア
-        self.currentPlayingPlaylistSongs([]); // 再生中リストをクリア
-        self.currentSongIndex(-1); // インデックスをリセット
-        // 必要ならプレイヤーの表示を初期状態に戻すなど
+        self.currentSong(null);
+        self.currentPlayingPlaylistSongs([]);
+        self.currentSongIndex(-1);
       }
     });
 
-    self.audioElement.addEventListener("timeupdate", function () {
-      if (!self.audioElement) return;
-      // TODO: Implement progress bar update logic here
-    });
-
+    //エラーイベント
     self.audioElement.addEventListener("error", function (e) {
       console.error("Audio player error:", self.audioElement.error, e);
       self.isPlaying(false);
@@ -96,16 +94,8 @@ function AppViewModel() {
       alert("音声ファイルの再生中にエラーが発生しました。");
     });
 
-    self.audioElement.addEventListener("canplay", function () {
-      if (!self.audioElement) return;
-      console.log("Audio can play. Duration:", self.audioElement.duration);
-      // TODO: Display song duration if needed
-    });
-
     /**
      * 指定された曲データが、現在ロードされている曲と同じかどうかを判定する
-     * @param {object} songData - リスト内の楽曲データ {id, ...}
-     * @returns {boolean}
      */
     self.isCurrentSong = function (songData) {
       const current = self.currentSong();
@@ -115,8 +105,6 @@ function AppViewModel() {
 
     /**
      * 指定された曲データが、現在再生中(一時停止ではなく)かどうかを判定する
-     * @param {object} songData - リスト内の楽曲データ {id, ...}
-     * @returns {boolean}
      */
     self.isCurrentlyPlaying = function (songData) {
       // 現在ロード中の曲と同じで、かつ再生中(isPlayingがtrue)か
@@ -125,23 +113,22 @@ function AppViewModel() {
 
     /**
      * リスト内の再生/一時停止ボタンがクリックされたときに呼び出されるメソッド
-     * @param {object} songData - クリックされた行の楽曲データ
      */
     self.togglePlayPauseList = function (songData) {
       console.log("List togglePlayPause called for:", songData.name);
       if (self.isCurrentlyPlaying(songData)) {
-        // ★ もし再生中の曲の「一時停止」ボタンが押されたら -> 一時停止する
+        // もし再生中の曲の「一時停止」ボタンが押されたら -> 一時停止する
         self.pauseSong();
       } else if (self.isCurrentSong(songData)) {
-        // ★ もし一時停止中の曲の「再生」ボタンが押されたら -> 再開する
+        // もし一時停止中の曲の「再生」ボタンが押されたら -> 再開する
         self.resumeSong();
       } else {
-        // ★ もしまだ再生されていない曲の「再生」ボタンが押されたら -> 新しく再生する
-        self.loadAndPlay(songData); // isPlaylistTrack は false (デフォルト)
+        // もしまだ再生されていない曲の「再生」ボタンが押されたら -> 新しく再生する
+        self.loadAndPlay(songData);
       }
     };
 
-    // ★★★ (任意) ブラウザ標準コントロール等で音量が変更された場合にViewModelに反映 ★★★
+    //ブラウザ標準コントロール等で音量が変更された場合にViewModelに反映
     self.audioElement.addEventListener("volumechange", function () {
       if (
         self.audioElement &&
@@ -157,7 +144,7 @@ function AppViewModel() {
   };
 
   /**
-   * Loads a song and starts playback.
+   * 楽曲データを受け取り、それを<audio>要素に読み込んで再生を開始する
    */
   self.loadAndPlay = function (songData, isPlaylistTrack = false) {
     console.log(
@@ -174,9 +161,8 @@ function AppViewModel() {
       console.error("Invalid song data provided.");
       return;
     }
-
+    //単独で再生した曲が終わったときに、勝手に以前のプレイリストの次の曲に進んでしまうのを防
     if (!isPlaylistTrack) {
-      // ★ ここで isPlaylistTrack を参照している
       self.currentPlayingPlaylistSongs([]);
       self.currentSongIndex(-1);
       console.log("Playlist playback state reset.");
@@ -185,6 +171,8 @@ function AppViewModel() {
     self.currentSong(songData);
     self.audioElement.src = songData.file_path;
     self.audioElement.load();
+
+    //<audio> 要素に「再生を開始して！」と命令
     var playPromise = self.audioElement.play();
 
     if (playPromise !== undefined) {
@@ -203,7 +191,7 @@ function AppViewModel() {
     }
   };
 
-  // --- ↓ プレイリスト全体の再生を開始するメソッドを追加 ↓ ---
+  // --- プレイリスト全体の再生を開始するメソッド ---
   self.playPlaylist = function () {
     // 現在表示しているプレイリストの楽曲リストを取得
     const songsToPlay = self.currentPlaylistSongs();
@@ -215,15 +203,15 @@ function AppViewModel() {
     console.log(`プレイリスト再生開始: 全 ${songsToPlay.length} 曲`);
     // 再生中のプレイリスト情報をセット
     self.currentPlayingPlaylistSongs(songsToPlay);
-    self.currentSongIndex(0); // 最初の曲から再生
+    self.currentSongIndex(0);
 
     // 最初の曲のデータを取得して再生開始
     const firstSong = songsToPlay[0];
-    self.loadAndPlay(firstSong, true); // 既存のメソッドを呼び出す
+    self.loadAndPlay(firstSong, true);
   };
 
   /**
-   * Pauses playback.
+   * 一時停止
    */
   self.pauseSong = function () {
     if (self.audioElement && self.isPlaying()) {
@@ -234,7 +222,7 @@ function AppViewModel() {
   };
 
   /**
-   * Resumes playback.
+   * 再生再開
    */
   self.resumeSong = function () {
     if (self.audioElement && !self.isPlaying() && self.currentSong()) {
@@ -256,7 +244,7 @@ function AppViewModel() {
   };
 
   /**
-   * Toggles play/pause state.
+   * 再生状態と一時停止状態を切り替える
    */
   self.playPauseToggle = function () {
     if (self.isPlaying()) {
@@ -267,7 +255,7 @@ function AppViewModel() {
   };
 
   /**
-   * Loads all songs for the "Add Song" modal.
+   * 「楽曲を追加」モーダル用に、全楽曲リストをAPIから読み込むメソッド
    */
   self.loadAllSongs = function () {
     self.loadingSongsError(null);
@@ -299,15 +287,12 @@ function AppViewModel() {
   };
 
   /**
-   * Loads songs for a specific playlist ID for the detail view.
-   * ★★★ Returns a Promise that resolves when loading is complete or fails. ★★★
-   * @param {number} playlistId - The ID of the playlist.
-   * @return {Promise} A promise that resolves on success or rejects on error.
+   * 特定のプレイリストの楽曲取得
    */
   self.loadCurrentPlaylistSongs = function (playlistId) {
     if (!playlistId || isNaN(parseInt(playlistId))) {
       console.warn("Invalid playlistId:", playlistId);
-      return Promise.reject("Invalid playlistId"); // ★ Promiseを返すように
+      return Promise.reject("Invalid playlistId");
     }
     playlistId = parseInt(playlistId);
     self.loadingPlaylistError(null);
@@ -316,8 +301,7 @@ function AppViewModel() {
     console.log(`Loading songs for playlist ID: ${playlistId}...`);
     const apiUrl = `/api/playlists/${playlistId}/songs`;
 
-    // ★★★ fetch の Promise を return する ★★★
-    return fetch(apiUrl) // ← return を追加！
+    return fetch(apiUrl)
       .then((response) => {
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}`);
@@ -332,7 +316,6 @@ function AppViewModel() {
             self.currentPlaylistSongs().length,
             "件"
           );
-          // return data; // 成功時の解決値を返すことも可能 (今回は不要)
         } else {
           throw new Error(
             data.message || "プレイリスト楽曲の取得に失敗しました。"
@@ -345,17 +328,17 @@ function AppViewModel() {
           error
         );
         self.loadingPlaylistError(error.message);
-        throw error; // ★ エラーを再throwしてPromiseをreject状態にする
+        throw error;
       });
   };
 
   /**
-   * Loads the main song list for the songs page.
+   * 楽曲一覧ページで楽曲データを読み込む用
    */
   self.loadSongsList = function () {
     self.loadingSongsListError(null);
     console.log("Loading main songs list from API...");
-    fetch("/api/songs") // Uses the same API as loadAllSongs for now
+    fetch("/api/songs")
       .then((response) => {
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}`);
@@ -383,15 +366,11 @@ function AppViewModel() {
   };
 
   /**
-   * Removes a song from the currently viewed playlist.
+   * プレイリストから楽曲削除
    */
   self.removeSong = function (songToRemove) {
-    console.log("removeSong called with song data:", songToRemove);
     const songId = songToRemove ? songToRemove.id : null;
     const playlistId = self.currentPlaylistId();
-    console.log(
-      `Attempting to remove Song ID: ${songId} from Playlist ID: ${playlistId}`
-    );
 
     if (
       !playlistId ||
@@ -410,7 +389,6 @@ function AppViewModel() {
     }
 
     const apiUrl = `/api/playlists/${playlistId}/songs/${songId}`;
-    console.log("Calling API URL:", apiUrl);
 
     fetch(apiUrl, { method: "DELETE" })
       .then((response) => {
@@ -426,8 +404,8 @@ function AppViewModel() {
         if (data === null || data.success) {
           const message = data ? data.message : "楽曲を削除しました。";
           console.log(message);
-          self.currentPlaylistSongs.remove(songToRemove); // ★ Update observableArray
-          const statusDiv = document.getElementById("playlist-status"); // Optional status message display
+          self.currentPlaylistSongs.remove(songToRemove);
+          const statusDiv = document.getElementById("playlist-status");
           if (statusDiv) {
             statusDiv.textContent = message;
             statusDiv.style.color = "green";
@@ -446,10 +424,9 @@ function AppViewModel() {
   };
 
   /**
-   * Deletes the entire playlist.
+   * プレイリスト全体の削除
    */
   self.deletePlaylist = function (data, event) {
-    console.log("deletePlaylist called. Event:", event);
     const button = event.currentTarget;
     if (!button) {
       console.error("Could not get button element.");
@@ -459,9 +436,6 @@ function AppViewModel() {
 
     const playlistId = button.getAttribute("data-playlist-id");
     const playlistName = button.getAttribute("data-playlist-name");
-    console.log(
-      `Attempting to delete Playlist ID: ${playlistId}, Name: ${playlistName}`
-    );
 
     if (!playlistId || !playlistName || isNaN(parseInt(playlistId))) {
       console.error("Invalid playlistId or playlistName.");
@@ -477,7 +451,6 @@ function AppViewModel() {
     }
 
     const apiUrl = `/api/playlists/${playlistId}`;
-    console.log(`Calling DELETE API URL: ${apiUrl}`);
 
     fetch(apiUrl, { method: "DELETE" })
       .then((response) => {
@@ -493,7 +466,7 @@ function AppViewModel() {
         const message = data ? data.message : "プレイリストを削除しました。";
         console.log(message);
         alert(message);
-        window.location.href = "/"; // Redirect to home page
+        window.location.href = "/";
       })
       .catch((error) => {
         console.error("プレイリスト削除エラー:", error);
@@ -501,52 +474,36 @@ function AppViewModel() {
       });
   };
   /**
-   * 再生ログを記録するAPIを呼び出すメソッド (内部用)
-   * @param {number} songId - 記録する楽曲ID
+   * 再生ログを記録するAPIを呼び出すメソッド
    */
   self.recordPlayLog = function (songId) {
-    // songId が数値として有効かチェック
     if (!songId || isNaN(parseInt(songId))) {
       console.warn("Invalid songId passed to recordPlayLog:", songId);
-      return; // 無効なIDなら何もしない
+      return;
     }
-    songId = parseInt(songId); // 念のため整数に変換
-    console.log(`再生ログ記録API呼び出し (Song ID: ${songId})`);
+    songId = parseInt(songId);
 
-    // --- ↓ fetch 処理を実行する (コメントアウトを解除) ↓ ---
     fetch("/api/logs/play", {
-      // ★ APIエンドポイントを確認
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        // --- ▼ CSRF対策が必要な場合 ▼ ---
-        // FuelPHPのデフォルト設定ではPOSTリクエストにCSRFトークンが必要です。
-        // トークンをどこか(例: HTMLのmetaタグ)に埋め込んでおき、JSで取得してヘッダーに追加します。
-        // 例: const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
-        // if (csrfToken) { headers['X-CSRF-Token'] = csrfToken; }
-        // 今回はまずトークンなしで試してみて、もしCSRF関連のエラーが出たら対策を追加しましょう。
-        // --- ▲ CSRF対策ここまで ▲ ---
       },
-      body: JSON.stringify({ song_id: songId }), // ★ Controller側(Input::json)で受け取るキー名に合わせる
+      body: JSON.stringify({ song_id: songId }),
     })
       .then((response) => {
-        // 応答ステータスをチェック (200 OK or 201 Created など)
         if (!response.ok) {
-          // エラーレスポンスの処理 (JSON形式を試みる)
           return response
             .json()
             .catch(() => {
-              // JSONパース失敗時はステータスコードでエラーを生成
               throw new Error(
                 `ログ記録APIエラー! HTTP status: ${response.status}`
               );
             })
             .then((errData) => {
-              // JSON形式のエラーデータがあればそれを含むエラーを生成
               throw { status: response.status, data: errData };
             });
         }
-        // 成功時 (JSONボディは必須ではないので、なくてもエラーにしない)
+        // 成功時
         return response.json().catch(() => null);
       })
       .then((data) => {
@@ -564,23 +521,21 @@ function AppViewModel() {
       .catch((error) => {
         // 通信エラーや上記の throw で捕捉されたエラー
         console.error("再生ログ記録API呼び出しエラー:", error);
-        // ユーザーに直接エラーを見せる必要は低いことが多い
       });
-    // --- ↑ ここまで fetch 処理 ↑ ---
-  }; // recordPlayLog メソッドの終わり
-  // --- ↓ 予約用プレイリスト一覧を読み込むメソッドを追加 ↓ ---
+  };
+  // 予約用プレイリスト一覧を読み込むメソッド
   self.loadAvailablePlaylists = function () {
     self.loadingAvailablePlaylistsError(null);
     console.log("Loading available playlists from API...");
 
-    fetch("/api/playlists") // 作成したAPIを呼び出す
+    fetch("/api/playlists")
       .then((response) => {
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         return response.json();
       })
       .then((data) => {
         if (data.success) {
-          self.availablePlaylists(data.playlists); // observableArrayを更新
+          self.availablePlaylists(data.playlists);
           console.log(
             "利用可能なプレイリスト読み込み完了:",
             self.availablePlaylists().length,
@@ -598,18 +553,17 @@ function AppViewModel() {
       });
   };
 
+  //データを読み込むメソッド
   self.loadReservations = function () {
     self.loadingReservationsError(null);
-    console.log("Loading reservations from API...");
-
-    fetch("/api/reservations") // ★これから作るAPIエンドポイント
+    fetch("/api/reservations")
       .then((response) => {
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         return response.json();
       })
       .then((data) => {
         if (data.success) {
-          self.reservations(data.reservations); // observableArray を更新
+          self.reservations(data.reservations);
           console.log(
             "予約一覧読み込み完了:",
             self.reservations().length,
@@ -625,12 +579,11 @@ function AppViewModel() {
       });
   };
   self.deleteReservation = function (reservationToDelete) {
-    // ★ 引数は予約データ ★
     console.log(
       "deleteReservation called with reservation data:",
       reservationToDelete
     );
-    // ↓ 予約IDを正しく取得 ↓
+    // 予約IDを正しく取得
     const reservationId = reservationToDelete ? reservationToDelete.id : null;
     if (!reservationId || isNaN(parseInt(reservationId))) {
       console.error("Invalid reservationId. Aborting delete.", reservationId);
@@ -638,7 +591,7 @@ function AppViewModel() {
       return;
     }
     const playlistName =
-      reservationToDelete.playlist_name || "不明なプレイリスト"; // 名前表示用に
+      reservationToDelete.playlist_name || "不明なプレイリスト";
     const reservationTime =
       reservationToDelete.reservation_datetime || "不明な日時";
 
@@ -649,17 +602,15 @@ function AppViewModel() {
         ).toLocaleString()}) を削除しますか？`
       )
     ) {
-      return; // キャンセル
+      return;
     }
 
     console.log(`予約ID: ${reservationId} を削除します。`);
-    // ★★★ API URL を修正 ★★★
-    const apiUrl = `/api/reservations/delete/${reservationId}`; // ★ 変更後のURL ★
+    const apiUrl = `/api/reservations/delete/${reservationId}`;
     console.log(`Calling DELETE API URL: ${apiUrl}`);
 
     fetch(apiUrl, { method: "DELETE" })
       .then((response) => {
-        /* ... (前回と同様の応答処理) ... */
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}`);
         }
@@ -672,9 +623,8 @@ function AppViewModel() {
         if (data === null || data.success) {
           const message = data ? data.message : "予約を削除しました。";
           console.log(message);
-          // ★ observableArray から削除 ★
           self.reservations.remove(reservationToDelete);
-          alert(message); // またはメッセージ表示
+          alert(message);
         } else {
           alert(`エラー: ${data.message || "削除に失敗しました。"}`);
         }
@@ -684,7 +634,7 @@ function AppViewModel() {
         alert(`エラーが発生しました: ${error.message || "通信エラー"}`);
       });
   };
-  // --- ↓ 予約編集用のプロパティとメソッドを追加 ↓ ---
+
   self.isEditingReservation = ko.observable(false); // モーダルが編集モードかどうかのフラグ
   self.editingReservationId = ko.observable(null); // 現在編集中の予約ID
 
@@ -694,7 +644,7 @@ function AppViewModel() {
       // 日時文字列 (YYYY-MM-DD HH:MM:SS) から日付と時刻を分離
       const dateTime = new Date(
         reservation.reservation_datetime.replace(/-/g, "/")
-      ); // Safari等での互換性考慮
+      );
       const dateStr =
         dateTime.getFullYear() +
         "-" +
@@ -706,31 +656,28 @@ function AppViewModel() {
         ":" +
         ("0" + dateTime.getMinutes()).slice(-2);
 
-      self.selectedPlaylistId(reservation.playlist_id); // ドロップダウンの選択
-      document.getElementById("reservation-date").value = dateStr; // 日付入力欄
-      document.getElementById("reservation-time").value = timeStr; // 時刻入力欄
+      self.selectedPlaylistId(reservation.playlist_id);
+      document.getElementById("reservation-date").value = dateStr;
+      document.getElementById("reservation-time").value = timeStr;
     } else {
       // データがなければフォームをクリア
       self.selectedPlaylistId(null);
       document.getElementById("reservation-date").value = "";
       document.getElementById("reservation-time").value = "";
     }
-    // エラーメッセージもクリア
-    const reservationStatusDiv = document.getElementById("reservation-status");
-    //if (reservationStatusDiv) reservationStatusDiv.textContent = "";
   };
 
   // 編集ボタンがクリックされたときに呼び出されるメソッド
   self.startEditReservation = function (reservationToEdit) {
     console.log("Editing reservation:", reservationToEdit);
-    self.isEditingReservation(true); // 編集モードにする
-    self.editingReservationId(reservationToEdit.id); // 編集対象IDを保持
-
-    // APIから最新の予約データを取得してフォームにセット (リストのデータを使うだけでも良いが、APIを使う方が確実)
-    // または、引数の reservationToEdit をそのまま使う (今回はこちらで実装)
+    self.isEditingReservation(true);
+    self.editingReservationId(reservationToEdit.id);
     self.setReservationFormData(reservationToEdit);
 
-    // 利用可能なプレイリストを読み込む (ドロップダウン用、未読込なら)
+    const reservationStatusDiv = document.getElementById("reservation-status");
+    if (reservationStatusDiv) reservationStatusDiv.textContent = "";
+
+    // 利用可能なプレイリストを読み込む
     if (self.availablePlaylists().length === 0) {
       self.loadAvailablePlaylists();
     }
@@ -743,10 +690,10 @@ function AppViewModel() {
   // 予約時刻をチェックするメソッド
   self.checkReservations = function () {
     const now = new Date();
-    console.log("予約チェック実行:", now.toLocaleTimeString()); // 定期実行されているか確認
+    console.log("予約チェック実行:", now.toLocaleTimeString());
 
-    // ViewModelが保持している予約リスト(status='reserved'のみ対象にすべきだが、一旦全件見る)
-    const upcomingReservations = self.reservations(); // 現在ロード済みの予約リスト
+    // ViewModelが保持している予約リスト
+    const upcomingReservations = self.reservations();
 
     let notificationToShow = null;
 
@@ -765,27 +712,18 @@ function AppViewModel() {
           id: reservation.id,
           playlist_name: reservation.playlist_name,
           reservation_datetime: reservation.reservation_datetime,
-          playlist_id: reservation.playlist_id, // ★ playlist_id を追加 ★
+          playlist_id: reservation.playlist_id,
         };
         break;
       }
     }
     if (notificationToShow) {
-      // ★★★ 通知済みステータス更新API呼び出しをここに追加 ★★★
-      // 例: self.markReservationAsNotified(notificationToShow.id);
-      // このAPI呼び出しが成功してから self.currentNotification をセットするのが望ましい
-      self.currentNotification(notificationToShow); // 仮で先にセット
+      self.currentNotification(notificationToShow);
       console.log("通知を表示します:", self.currentNotification());
     }
-
-    // ----------------------------------------------------------------
-    // TODO: 将来的には、ここで '/api/reservations/upcoming' のようなAPIを呼び出し、
-    //       サーバー側でフィルタリングされた「もうすぐ時間になる未通知の予約」
-    //       リストを取得する方が効率的＆正確です。
-    // ----------------------------------------------------------------
   };
 
-  // 通知バナーを閉じるメソッド (実装)
+  // 通知バナーを閉じるメソッド
   self.dismissNotification = function () {
     const notification = self.currentNotification();
     if (notification && notification.id) {
@@ -797,7 +735,7 @@ function AppViewModel() {
       fetch(apiUrl, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status: "canceled" }), // 新しいステータスを送信
+        body: JSON.stringify({ status: "canceled" }),
       })
         .then((response) => {
           if (!response.ok) {
@@ -805,7 +743,7 @@ function AppViewModel() {
               `予約ステータス更新APIエラー: HTTP ${response.status}`
             );
           }
-          return response.json().catch(() => null); // ボディはなくてもOK
+          return response.json().catch(() => null);
         })
         .then((data) => {
           if (data && data.success) {
@@ -819,19 +757,16 @@ function AppViewModel() {
         )
         .finally(() => {
           self.currentNotification(null); // APIの結果に関わらず、とりあえずバナーは閉じる
-          // 必要なら予約一覧を再読み込み
-          // self.loadReservations();
         });
     } else {
-      self.currentNotification(null); // 念のためクリア
+      self.currentNotification(null);
     }
   };
 
-  // 通知バナーの再生ボタンを押したときの処理 (実装)
+  // 通知バナーの再生ボタンを押したときの処理
   self.playFromNotification = function () {
     const notification = self.currentNotification();
     if (notification && notification.id && notification.playlist_id) {
-      // playlist_id があるか確認
       console.log("通知から再生を開始します:", notification);
       const reservationId = notification.id;
       const playlistIdToPlay = notification.playlist_id;
@@ -862,50 +797,43 @@ function AppViewModel() {
           console.error("予約ステータス更新API呼び出しエラー:", error)
         )
         .finally(() => {
-          // APIの結果に関わらず画面遷移を実行 (失敗しても再生は試みる)
-          self.currentNotification(null); // 通知をクリア
+          // APIの結果に関わらず画面遷移を実行
+          self.currentNotification(null);
           // プレイリスト詳細ページへ遷移
-          const targetUrl = `/playlist/view/${playlistIdToPlay}?autoplay=1`; // ← 末尾に ?autoplay=1 を追加
+          const targetUrl = `/playlist/view/${playlistIdToPlay}?autoplay=1`;
           console.log(
             `プレイリスト詳細ページへ遷移し、自動再生を試みます: ${targetUrl}`
           );
-          window.location.href = targetUrl; // ★ ページ遷移実行
+          window.location.href = targetUrl;
         });
     } else {
       console.error(
         "通知データに再生に必要な情報(ID or PlaylistID)がありません。",
         notification
       );
-      self.currentNotification(null); // 不正なデータなのでクリア
+      self.currentNotification(null);
       alert("エラー: 再生に必要な情報を取得できませんでした。");
     }
   };
 
   // --- ViewModelの初期化処理 ---
   self.initialize = function () {
-    // ページ読み込み時に実行したい処理
-    console.log("ViewModel Initializing...");
-    // --- ↓ Cookieから音量を読み込む処理を追加 ↓ ---
-    const savedVolume = getCookie("player_volume"); // 'player_volume' という名前で保存/読み込み
+    // --- Cookieから音量を読み込む処理を追加 ---
+    const savedVolume = getCookie("player_volume");
     if (savedVolume !== null && !isNaN(parseFloat(savedVolume))) {
       let volumeValue = parseFloat(savedVolume);
       // 値の範囲を 0.0 ～ 1.0 に補正
       volumeValue = Math.max(0, Math.min(1, volumeValue));
-      self.currentVolume(volumeValue); // ViewModelのobservableを更新
+      self.currentVolume(volumeValue);
       console.log("Saved volume loaded from cookie:", volumeValue);
     } else {
       console.log("No saved volume found in cookie or invalid value.");
-      // Cookieがない場合はデフォルト値(0.8)が使われる
     }
-    // 定期的に予約をチェックするタイマーを開始 (例: 60秒ごと)
+    // 定期的に予約をチェックするタイマーを開始
     self.reservationCheckInterval = setInterval(
       self.checkReservations,
       60 * 1000
-    ); // 60000ミリ秒
-    // 最初のチェックを少し遅らせて実行しても良いかも
-    // setTimeout(self.checkReservations, 5000); // 5秒後に初回チェックなど
-
-    // ページ種別に応じて初期データを読み込む (これはDOMContentLoadedに移動)
+    );
   };
 
   self.currentVolume.subscribe(function (newVolume) {
@@ -921,10 +849,9 @@ function AppViewModel() {
 } // --- End of AppViewModel ---
 
 /**
- * File Upload Function (using fetch)
+ * ファイルアップロードを実行する関数
  */
 function uploadFile(file) {
-  // (内容は変更なし - 前回のコードを参照)
   const uploadStatusDiv = document.getElementById("upload-status");
   if (!uploadStatusDiv) {
     console.error('Element with id "upload-status" not found.');
@@ -938,7 +865,7 @@ function uploadFile(file) {
     .then((response) => {
       /* ... */ if (!response.ok) throw new Error(`HTTP ${response.status}`);
       return response.json();
-    }) // Simplified error handling
+    })
     .then((data) => {
       if (data.success) {
         uploadStatusDiv.textContent = `成功: ${data.message} (${data.file_info.name} として登録)`;
@@ -956,10 +883,7 @@ function uploadFile(file) {
 }
 
 /**
- * Cookieを設定する関数
- * @param {string} name - Cookie名
- * @param {string} value - 設定する値
- * @param {number} days - 有効日数 (省略時はセッションCookie)
+ * Cookieを設定する関数)
  */
 function setCookie(name, value, days) {
   var expires = "";
@@ -969,13 +893,11 @@ function setCookie(name, value, days) {
     expires = "; expires=" + date.toUTCString();
   }
   document.cookie =
-    name + "=" + (value || "") + expires + "; path=/; SameSite=Lax"; // パスとSameSite属性も指定推奨
+    name + "=" + (value || "") + expires + "; path=/; SameSite=Lax";
 }
 
 /**
  * 指定された名前のCookieを取得する関数
- * @param {string} name - Cookie名
- * @return {string|null} Cookieの値、存在しない場合は null
  */
 function getCookie(name) {
   var nameEQ = name + "=";
@@ -988,30 +910,30 @@ function getCookie(name) {
   return null;
 }
 
-// ★★★ Execute when the HTML document is fully loaded ★★★
+// HTML文書の構造が完全に読み込まれたとき
 document.addEventListener("DOMContentLoaded", function () {
-  // --- ① Initialize ViewModel and apply Knockout bindings ---
+  // ---①初期化---
+  // ViewModelとHTMLの連携
   const appViewModel = new AppViewModel();
   ko.applyBindings(appViewModel);
-  console.log("Knockout ViewModel activated!");
-
-  // --- Initialize Audio Player ---
+  // オーディオプレイヤーの初期化
   const audioElement = document.getElementById("audio-player");
   if (audioElement) {
     appViewModel.initAudioPlayer(audioElement);
   } else {
     console.error("Audio player element (#audio-player) not found!");
   }
-
-  // --- ViewModelの初期化処理呼び出し --- ★★★ 追加 ★★★
+  // --- ViewModelの初期化処理呼び出し ---
   appViewModel.initialize();
 
-  // --- ② Song Upload Event Listeners ---
+  // ---②楽曲追加イベントリスナー ---
   const addSongButton = document.getElementById("add-song-button");
   const songFileInput = document.getElementById("song-file-input");
+  // 「楽曲を追加」ボタンがクリックされたら、隠れたファイル入力をクリック
   if (addSongButton && songFileInput) {
     addSongButton.addEventListener("click", () => songFileInput.click());
   }
+  // ファイル入力でファイルが選択されたら(またはキャンセルされたら)
   if (songFileInput) {
     songFileInput.addEventListener("change", (event) => {
       if (event.target.files.length > 0) {
@@ -1023,7 +945,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 
-  // --- ③ プレイリスト作成関連のイベントリスナー設定 ---
+  // --- ③ プレイリスト作成関連イベントリスナー ---
   const createPlaylistButton = document.getElementById(
     "create-playlist-button"
   );
@@ -1032,11 +954,10 @@ document.addEventListener("DOMContentLoaded", function () {
     "submit-playlist-button"
   );
   const newPlaylistNameInput = document.getElementById("new-playlist-name");
-  // ★ メッセージ表示用のspanを取得 (フォームの外にある想定)
   const createPlaylistStatusSpan = document.getElementById(
     "create-playlist-status"
   );
-  const playlistListUl = document.getElementById("playlist-list"); // 一覧表示用のul
+  const playlistListUl = document.getElementById("playlist-list");
 
   // 「新しいプレイリストを作成する」ボタンのクリックイベント
   if (
@@ -1052,11 +973,11 @@ document.addEventListener("DOMContentLoaded", function () {
         createPlaylistForm.style.display === "";
       createPlaylistForm.style.display = isHidden ? "block" : "none";
 
-      // ★ フォームが表示されるタイミングで実行する処理 ★
+      // フォームが表示されるタイミングで実行する処理
       if (isHidden) {
         createPlaylistStatusSpan.textContent = ""; // ★ 前回のメッセージをクリア
         newPlaylistNameInput.value = ""; // ★ 入力欄をクリア
-        newPlaylistNameInput.focus(); // ★ 入力欄にフォーカスを当てる (任意)
+        newPlaylistNameInput.focus(); // ★ 入力欄にフォーカスを当てる
       }
     });
   }
@@ -1070,14 +991,14 @@ document.addEventListener("DOMContentLoaded", function () {
     createPlaylistForm
   ) {
     submitPlaylistButton.addEventListener("click", function () {
-      const playlistName = newPlaylistNameInput.value.trim(); // 入力値を取得
+      const playlistName = newPlaylistNameInput.value.trim();
 
       // バリデーション: 名前が空でないか
       if (playlistName === "") {
         createPlaylistStatusSpan.textContent =
           "プレイリスト名を入力してください。";
         createPlaylistStatusSpan.style.color = "red";
-        // 3秒後にエラーメッセージを消す (任意)
+        // 3秒後にエラーメッセージを消す
         setTimeout(() => {
           if (
             createPlaylistStatusSpan.textContent ===
@@ -1085,15 +1006,15 @@ document.addEventListener("DOMContentLoaded", function () {
           )
             createPlaylistStatusSpan.textContent = "";
         }, 3000);
-        return; // 処理中断
+        return;
       }
 
       // API呼び出し中の表示とボタン無効化
       createPlaylistStatusSpan.textContent = "作成中...";
-      createPlaylistStatusSpan.style.color = "black"; // メッセージ色をリセット
+      createPlaylistStatusSpan.style.color = "black";
       submitPlaylistButton.disabled = true;
 
-      // 送信するデータ準備 (FormData)
+      // 送信するデータ準備
       const formData = new FormData();
       formData.append("name", playlistName);
 
@@ -1103,8 +1024,6 @@ document.addEventListener("DOMContentLoaded", function () {
         body: formData,
       })
         .then((response) => {
-          // レスポンス処理
-          // エラーレスポンスも含めてJSONとして解析試行
           return response.json().then((data) => ({
             ok: response.ok,
             status: response.status,
@@ -1115,34 +1034,31 @@ document.addEventListener("DOMContentLoaded", function () {
           // 結果処理
           console.log("プレイリスト作成応答:", result);
           if (result.ok) {
-            // API成功 (HTTP 201 Created を想定)
-            createPlaylistStatusSpan.textContent = result.data.message; // 成功メッセージ表示
+            // API成功
+            createPlaylistStatusSpan.textContent = result.data.message;
             createPlaylistStatusSpan.style.color = "green";
-            newPlaylistNameInput.value = ""; // 入力欄クリア
-            createPlaylistForm.style.display = "none"; // ★ フォームは成功時に閉じる
+            newPlaylistNameInput.value = "";
+            createPlaylistForm.style.display = "none";
 
-            // ★★★ プレイリスト一覧の動的更新 (DOM操作) ★★★
+            //  プレイリスト一覧の動的更新 (DOM操作)
             const newListItem = document.createElement("li");
             const newLink = document.createElement("a");
-            // リンク先URLを正しく生成 (要件に合わせて調整)
-            newLink.href = "/playlist/view/" + result.data.playlist.id; // ControllerからのIDを使用
-            newLink.textContent = result.data.playlist.name; // Controllerからの名前を使用
+            // リンク先URLを正しく生成
+            newLink.href = "/playlist/view/" + result.data.playlist.id;
+            newLink.textContent = result.data.playlist.name;
             const dateSpan = document.createElement("span");
-            // 作成日は new Date() だとズレるので、サーバーから返してもらうか、ここでは表示しない方が良いかも
-            dateSpan.textContent = ` (作成日: ${new Date().toLocaleDateString()})`; // 仮表示
+            dateSpan.textContent = ` (作成日: ${new Date().toLocaleDateString()})`;
             newListItem.appendChild(newLink);
             newListItem.appendChild(dateSpan);
 
-            // 「まだありません」の表示を削除 (もしあれば)
             const noPlaylistLi = playlistListUl.querySelector("li:only-child");
             if (
               noPlaylistLi &&
               noPlaylistLi.textContent.includes("まだありません")
             ) {
-              playlistListUl.innerHTML = ""; // 中身を一旦空にする
+              playlistListUl.innerHTML = "";
             }
-            playlistListUl.appendChild(newListItem); // 新しい項目をリストに追加
-            // ★★★ ここまで ★★★
+            playlistListUl.appendChild(newListItem);
 
             // 成功メッセージを3秒後に消す
             setTimeout(() => {
@@ -1150,13 +1066,12 @@ document.addEventListener("DOMContentLoaded", function () {
                 createPlaylistStatusSpan.textContent = "";
             }, 3000);
           } else {
-            // API失敗 (HTTP 4xx, 5xx - 例: 409 Conflict)
+            // API失敗
             createPlaylistStatusSpan.textContent = `エラー: ${
               result.data.message || "不明なエラー"
-            }`; // サーバーからのメッセージを表示
+            }`;
             createPlaylistStatusSpan.style.color = "red";
-            // ★ エラー時はフォームを閉じない ★
-            // エラーメッセージを5秒後に消す (任意)
+            // エラーメッセージを5秒後に消す
             setTimeout(() => {
               if (
                 createPlaylistStatusSpan.textContent ===
@@ -1167,13 +1082,13 @@ document.addEventListener("DOMContentLoaded", function () {
           }
         })
         .catch((error) => {
-          // 通信エラーなど fetch 自体の失敗
+          //　fetch 自体の失敗
           console.error("プレイリスト作成エラー:", error);
           createPlaylistStatusSpan.textContent = `エラー: ${
             error.message || "通信に失敗しました。"
           }`;
           createPlaylistStatusSpan.style.color = "red";
-          // エラーメッセージを5秒後に消す (任意)
+          // エラーメッセージを5秒後に消す
           setTimeout(() => {
             if (
               createPlaylistStatusSpan.textContent ===
@@ -1188,9 +1103,8 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     });
   }
-  // --- ↑ ここまでプレイリスト作成関連 ↑ ---
 
-  // --- ④ Playlist Detail Page - Add Song Modal Event Listeners ---
+  // --- ④ プレリスト詳細ページ ---
   const addSongToPlaylistButton = document.getElementById(
     "add-song-to-playlist-button"
   );
@@ -1205,17 +1119,20 @@ document.addEventListener("DOMContentLoaded", function () {
   const addSongStatusDiv = document.getElementById("add-song-status");
   const playlistSongsTable = document.getElementById("playlist-songs-table");
 
+  //モーダル表示ボタン
   if (addSongToPlaylistButton && addSongModal) {
     addSongToPlaylistButton.addEventListener("click", () => {
       addSongModal.style.display = "block";
       appViewModel.loadAllSongs();
     });
   }
+  //モーダルキャンセルボタン
   if (cancelAddSongsButton && addSongModal) {
     cancelAddSongsButton.addEventListener("click", () => {
-      addSongModal.style.display = "none"; /* Clear status/checks */
+      addSongModal.style.display = "none";
     });
   }
+  //「選択した曲を追加」ボタン
   if (
     submitAddSongsButton &&
     addSongListDiv &&
@@ -1227,7 +1144,7 @@ document.addEventListener("DOMContentLoaded", function () {
       const checkedBoxes = addSongListDiv.querySelectorAll(
         'input[type="checkbox"]:checked'
       );
-      const songIdsToAdd = Array.from(checkedBoxes).map((cb) => cb.value); // More concise way
+      const songIdsToAdd = Array.from(checkedBoxes).map((cb) => cb.value);
       if (songIdsToAdd.length === 0) {
         /* ... Show error ... */ return;
       }
@@ -1255,7 +1172,6 @@ document.addEventListener("DOMContentLoaded", function () {
         })
         .then((data) => {
           if (data.success) {
-            // ★★★ API成功時の処理をしっかり記述 ★★★
             // 1. 成功メッセージを表示
             addSongStatusDiv.textContent = `成功: ${
               data.message || "楽曲を追加しました。"
@@ -1264,20 +1180,20 @@ document.addEventListener("DOMContentLoaded", function () {
 
             // 2. プレイリスト一覧を再読み込みして更新
             console.log("楽曲追加成功、リストを再読み込みします。");
-            appViewModel.loadCurrentPlaylistSongs(currentPlaylistId); // ViewModelのメソッド呼び出し
+            appViewModel.loadCurrentPlaylistSongs(currentPlaylistId);
 
             // 3. 少し待ってからモーダルを閉じ、メッセージもクリアする
             setTimeout(() => {
-              addSongModal.style.display = "none"; // モーダルを非表示
-              addSongStatusDiv.textContent = ""; // メッセージをクリア
-            }, 1500); // 1.5秒後に実行する例 (時間は調整可)
+              addSongModal.style.display = "none";
+              addSongStatusDiv.textContent = "";
+            }, 1500); // 1.5秒後に実行する
           } else {
-            // API失敗時の処理 (変更なし)
+            // API失敗時の処理
             addSongStatusDiv.textContent = `エラー (${result.status}): ${
               data.message || "不明なエラー"
-            }`; // result変数がないのでdataを使うべき
+            }`;
             addSongStatusDiv.style.color = "red";
-            // エラーメッセージを5秒後に消す (任意)
+            // エラーメッセージを5秒後に消す
             setTimeout(() => {
               if (
                 addSongStatusDiv.textContent ===
@@ -1301,24 +1217,23 @@ document.addEventListener("DOMContentLoaded", function () {
   const createReservationButton = document.getElementById(
     "create-reservation-button"
   ); // 全体ページのボタン
-  const reservationModal = document.getElementById("reservation-modal"); // モーダル本体
+  const reservationModal = document.getElementById("reservation-modal");
   const cancelReservationButton = document.getElementById(
     "cancel-reservation-button"
   ); // モーダルのキャンセルボタン
-  const reservationStatusDiv = document.getElementById("reservation-status"); // メッセージ表示用
+  const reservationStatusDiv = document.getElementById("reservation-status");
 
   // 「新規予約を作成」ボタンがクリックされたらモーダルを表示
   if (createReservationButton && reservationModal) {
     createReservationButton.addEventListener("click", function () {
-      // モーダル表示前に中身をリセット（任意）
+      // モーダル表示前に中身をリセット
       if (reservationStatusDiv) reservationStatusDiv.textContent = "";
       const playlistSelect = document.getElementById("reservation-playlist");
-      if (playlistSelect) playlistSelect.selectedIndex = 0; // ドロップダウンを初期状態に
-      document.getElementById("reservation-date").value = ""; // 日付クリア
-      document.getElementById("reservation-time").value = ""; // 時刻クリア
-
-      reservationModal.style.display = "block"; // モーダルを表示
-      // ★★★ ViewModelのメソッドを呼び出してプレイリストを読み込む ★★★
+      if (playlistSelect) playlistSelect.selectedIndex = 0;
+      document.getElementById("reservation-date").value = "";
+      document.getElementById("reservation-time").value = "";
+      if (reservationStatusDiv) reservationStatusDiv.textContent = "";
+      reservationModal.style.display = "block";
       appViewModel.loadAvailablePlaylists();
     });
   }
@@ -1326,10 +1241,9 @@ document.addEventListener("DOMContentLoaded", function () {
   // モーダルの「キャンセル」ボタンがクリックされたらモーダルを非表示
   if (cancelReservationButton && reservationModal) {
     cancelReservationButton.addEventListener("click", function () {
-      reservationModal.style.display = "none"; // モーダルを非表示
+      reservationModal.style.display = "none";
     });
   }
-  // --- ↑ ここまで追加 ↑ ---
 
   const saveReservationButton = document.getElementById(
     "save-reservation-button"
@@ -1339,7 +1253,7 @@ document.addEventListener("DOMContentLoaded", function () {
   );
   const reservationDateInput = document.getElementById("reservation-date");
   const reservationTimeInput = document.getElementById("reservation-time");
-
+  // --- 予約作成ボタンがクリックされたとき ---
   if (
     saveReservationButton &&
     reservationPlaylistSelect &&
@@ -1350,11 +1264,11 @@ document.addEventListener("DOMContentLoaded", function () {
   ) {
     saveReservationButton.addEventListener("click", function () {
       // 1. 入力値を取得
-      const playlistId = appViewModel.selectedPlaylistId(); // ViewModelから選択中のIDを取得
+      const playlistId = appViewModel.selectedPlaylistId();
       const dateValue = reservationDateInput.value;
       const timeValue = reservationTimeInput.value;
 
-      // 2. バリデーション (必須チェック、未来日時チェックなど)
+      // 2. バリデーション
       let errors = [];
       if (!playlistId) {
         errors.push("プレイリストを選択してください。");
@@ -1367,7 +1281,7 @@ document.addEventListener("DOMContentLoaded", function () {
       }
       if (dateValue && timeValue) {
         const selectedDateTime = new Date(dateValue + "T" + timeValue + ":00");
-        // 簡単な未来チェック (5分後以降など、少し余裕を持たせても良い)
+        // 簡単な未来チェック
         if (selectedDateTime <= new Date(Date.now() + 5 * 60 * 1000)) {
           errors.push("現在時刻より十分に未来の日時を指定してください。");
         }
@@ -1375,7 +1289,7 @@ document.addEventListener("DOMContentLoaded", function () {
       if (errors.length > 0) {
         reservationStatusDiv.textContent = errors.join(" ");
         reservationStatusDiv.style.color = "red";
-        return; // エラーがあれば中断
+        return;
       }
 
       // 状態メッセージとボタン無効化
@@ -1391,10 +1305,10 @@ document.addEventListener("DOMContentLoaded", function () {
       formData.append("date", dateValue);
       formData.append("time", timeValue);
 
-      // ★★★ 編集モードか新規作成モードかでAPIのURLとメソッドを決定 ★★★
+      // 編集モードか新規作成モードかでAPIのURLとメソッドを決定
       let apiUrl;
-      let method = "POST"; // 更新もPOSTで受け付けるようにAPIを設計した場合
-      let successStatusCode = 201; // デフォルトは作成成功(201)
+      let method = "POST";
+      let successStatusCode = 201;
 
       if (appViewModel.isEditingReservation()) {
         // ---- 編集モードの場合 ----
@@ -1406,18 +1320,17 @@ document.addEventListener("DOMContentLoaded", function () {
           saveReservationButton.disabled = false;
           return;
         }
-        apiUrl = `/api/reservations/update/${editingId}`; // 更新APIのURL
-        successStatusCode = 200; // 更新成功は通常200 OK
+        apiUrl = `/api/reservations/update/${editingId}`;
+        successStatusCode = 200;
       } else {
         // ---- 新規作成モードの場合 ----
-        apiUrl = "/api/reservations/create"; // 作成APIのURL
+        apiUrl = "/api/reservations/create";
       }
       console.log(`Calling API: ${method} ${apiUrl}`);
 
       // 4. APIを呼び出す
       fetch(apiUrl, { method: method, body: formData })
         .then((response) => {
-          // エラーレスポンスもJSONで受け取る想定で処理
           return response.json().then((data) => ({
             ok: response.ok,
             status: response.status,
@@ -1432,15 +1345,15 @@ document.addEventListener("DOMContentLoaded", function () {
             result
           );
           if (result.ok) {
-            // HTTPステータスが2xxの場合 (期待するのは 200 or 201)
-            alert(result.data.message); // 成功メッセージを表示
-            reservationModal.style.display = "none"; // モーダルを閉じる
+            // HTTPステータスが2xxの場合
+            alert(result.data.message);
+            reservationModal.style.display = "none";
 
-            // ★★★ 予約一覧を再読み込みして更新 ★★★
+            // 予約一覧を再読み込みして更新
             console.log("予約処理成功、リストを再読み込みします。");
-            appViewModel.loadReservations(); // ViewModelのメソッド呼び出し
+            appViewModel.loadReservations();
           } else {
-            // APIがエラーを返した場合 (4xx, 5xx)
+            // APIがエラーを返した場合
             reservationStatusDiv.textContent = `エラー (${result.status}): ${
               result.data.message || "不明なエラー"
             }`;
@@ -1461,30 +1374,27 @@ document.addEventListener("DOMContentLoaded", function () {
           reservationStatusDiv.style.color = "red";
         })
         .finally(() => {
-          saveReservationButton.disabled = false; // ボタンを再度有効化
-          // 編集モードを解除し、フォーム内容をリセット（成功・失敗に関わらず）
+          saveReservationButton.disabled = false;
+          // 編集モードを解除し、フォーム内容をリセット
           if (appViewModel.isEditingReservation()) {
             appViewModel.isEditingReservation(false);
             appViewModel.editingReservationId(null);
           }
-          // 新規作成の場合もフォームをクリアした方が良いかも
-          appViewModel.setReservationFormData(null); // フォームクリアヘルパー呼び出し
+          appViewModel.setReservationFormData(null);
         });
     });
   }
-  // ★★★ 全体ページ（ホーム）の予約一覧を初期読み込み ★★★
+  // 全体ページ（ホーム）の予約一覧を初期読み込み
   const reservationsListTable = document.getElementById(
     "reservations-list-table"
   ); // Viewに追加したテーブルID
   if (reservationsListTable) {
     // 全体ページかどうかを判定
-    console.log("全体ページ読み込み、予約リスト取得開始...");
-    appViewModel.loadReservations(); // ★ ViewModelのメソッドを呼び出し ★
+    appViewModel.loadReservations();
   }
 
   // --- ⑤ Initial data loading based on page ---
   if (playlistSongsTable) {
-    // If on playlist detail page
     const currentPlaylistId =
       playlistSongsTable.getAttribute("data-playlist-id");
     if (currentPlaylistId) {
@@ -1493,11 +1403,11 @@ document.addEventListener("DOMContentLoaded", function () {
         currentPlaylistId
       );
 
-      // ★★★ 楽曲リスト読み込み完了後に自動再生チェックを行う ★★★
+      // 楽曲リスト読み込み完了後に自動再生チェックを行う
       appViewModel
-        .loadCurrentPlaylistSongs(currentPlaylistId) // loadメソッドはPromiseを返す
+        .loadCurrentPlaylistSongs(currentPlaylistId)
         .then(() => {
-          // --- ↓↓↓ 読み込み成功後に実行される処理 ↓↓↓ ---
+          // --- 読み込み成功後に実行される処理 ---
           console.log("楽曲リスト読み込み成功、自動再生チェックへ");
           const urlParams = new URLSearchParams(window.location.search);
           const autoplay = urlParams.get("autoplay");
@@ -1506,23 +1416,22 @@ document.addEventListener("DOMContentLoaded", function () {
             console.log(
               "Autoplay parameter detected. Starting playlist playback..."
             );
-            // 少し遅延させる (必須ではないかも)
+            // 少し遅延させる
             setTimeout(() => {
               if (typeof appViewModel.playPlaylist === "function") {
-                appViewModel.playPlaylist(); // ★ プレイリスト再生を開始
+                appViewModel.playPlaylist();
               } else {
                 console.error("playPlaylist method not found");
               }
-            }, 100); // 0.1秒後に実行
+            }, 100);
 
             try {
-              history.replaceState(null, "", window.location.pathname); // URLパラメータ削除
+              history.replaceState(null, "", window.location.pathname);
               console.log("Autoplay parameter removed from URL.");
             } catch (e) {
               console.warn("Could not remove autoplay parameter.");
             }
           }
-          // --- ↑↑↑ 読み込み成功後に実行される処理 ↑↑↑ ---
         })
         .catch((error) => {
           // 楽曲リスト読み込み失敗時の処理
@@ -1530,15 +1439,12 @@ document.addEventListener("DOMContentLoaded", function () {
             "自動再生前の楽曲リスト読み込みに失敗しました。",
             error
           );
-          // 必要ならユーザーにエラーメッセージ表示 (ViewModelのloadingPlaylistErrorを使うなど)
         });
-      // ★★★ ここまで修正 ★★★
     }
   }
-  const songsListTable = document.getElementById("songs-list-table"); // ★ Get song list table ID
+  const songsListTable = document.getElementById("songs-list-table"); // Get song list table ID
   if (songsListTable) {
-    // If on main song list page
     console.log("楽曲一覧ページ読み込み、リスト取得開始...");
-    appViewModel.loadSongsList(); // ★ Load the main song list
+    appViewModel.loadSongsList();
   }
 }); // ★★★ End of DOMContentLoaded Listener ★★★

@@ -7,12 +7,11 @@ class Controller_Api_Reservations extends Controller_Rest
     protected $_response_format = 'json';
 
     /**
-     * 新しい再生予約を作成する (POST /api/reservations)
+     * 新しい再生予約を作成する 
      */
     public function post_create()
     {
         // --- 1. POSTデータ取得 ---
-        // JavaScriptからは playlist_id, date, time が送られてくる想定
         $playlist_id = \Input::post('playlist_id', null);
         $date_str = \Input::post('date', null); // YYYY-MM-DD
         $time_str = \Input::post('time', null); // HH:MM
@@ -22,13 +21,12 @@ class Controller_Api_Reservations extends Controller_Rest
             return \Response::forge(\Format::forge(array('success' => false, 'message' => 'プレイリスト、日付、時刻は必須です。'))->to_json(), 400, array('Content-Type' => 'application/json'));
         }
 
-        // 日付と時刻を結合して DATETIME 形式 (YYYY-MM-DD HH:MM:00) にする
+        // 日付と時刻を結合して DATETIME 形式にする
         $datetime_str = $date_str . ' ' . $time_str . ':00';
-        // strtotimeで有効な日時か簡易チェック
+        // 有効な日時か簡易チェック
         if (strtotime($datetime_str) === false) {
              return \Response::forge(\Format::forge(array('success' => false, 'message' => '日時の形式が無効です。'))->to_json(), 400, array('Content-Type' => 'application/json'));
         }
-        // TODO: 未来の日時かどうかのチェックも追加するとより良い
 
         // --- 3. Model呼び出し ---
         $result = Model_Reservation::create_reservation((int)$playlist_id, $datetime_str);
@@ -36,32 +34,32 @@ class Controller_Api_Reservations extends Controller_Rest
         // --- 4. 結果に応じてレスポンス生成 ---
         if ($result === 'duplicate') {
             // 日時重複エラー
-            return \Response::forge(\Format::forge(array('success' => false, 'message' => '指定された日時 ('.$datetime_str.') には既に予約が存在します。'))->to_json(), 409, array('Content-Type' => 'application/json')); // 409 Conflict
+            return \Response::forge(\Format::forge(array('success' => false, 'message' => '指定された日時 ('.$datetime_str.') には既に予約が存在します。'))->to_json(), 409, array('Content-Type' => 'application/json')); 
         } elseif ($result !== false) {
-            // 作成成功 ( $result には予約IDが入っている)
+            // 作成成功 
             $response = array(
                 'success' => true,
                 'message' => '予約を作成しました。',
-                'reservation' => array( // 作成された予約情報(一部)を返す
+                'reservation' => array( 
                     'id' => $result,
                     'playlist_id' => (int)$playlist_id,
                     'reservation_datetime' => $datetime_str,
                     'status' => 'reserved',
                 )
             );
-            return \Response::forge(\Format::forge($response)->to_json(), 201, array('Content-Type' => 'application/json')); // 201 Created
+            return \Response::forge(\Format::forge($response)->to_json(), 201, array('Content-Type' => 'application/json')); 
         } else {
             // その他のエラー
             return \Response::forge(\Format::forge(array('success' => false, 'message' => '予約の作成中にエラーが発生しました。'))->to_json(), 500, array('Content-Type' => 'application/json'));
         }
     }
     /**
-     * 予約一覧を取得する (GET /api/reservations)
+     * 予約一覧を取得する 
      */
-    public function get_index() // GETリクエストに対応
+    public function get_index() 
     {
         try {
-            // Model を使ってプレイリスト名付きで全予約を取得 (予約日時順)
+            // Model を使ってプレイリスト名付きで全予約を取得
             $reservations = Model_Reservation::find_all_with_playlist_name();
 
             $response = array(
@@ -79,10 +77,8 @@ class Controller_Api_Reservations extends Controller_Rest
 
     /**
      * 指定されたIDの予約を削除する (DELETE /api/reservations/delete/:id)
-     *
-     * @param int $id 削除する予約のID (URLから取得)
      */
-    public function action_delete($id = null) // ★ メソッド名を action_delete に変更 ★
+    public function action_delete($id = null) 
     {
          // パラメータチェック
         if ($id === null || !ctype_digit((string)$id) || (int)$id <= 0) {
@@ -94,17 +90,15 @@ class Controller_Api_Reservations extends Controller_Rest
         $result = Model_Reservation::delete_reservation($id);
 
          if ($result) {
-             // 成功 (200 OK または 204 No Content)
+             // 成功 
              return \Response::forge(\Format::forge(array('success' => true, 'message' => '予約を削除しました。'))->to_json(), 200, array('Content-Type' => 'application/json'));
-             // または return \Response::forge(null, 204);
          } else {
-             // 失敗 (404 Not Found または 500 Internal Server Error)
+             // 失敗 
              return \Response::forge(\Format::forge(array('success' => false, 'message' => '予約の削除に失敗しました。該当の予約が見つからないか、サーバーエラーが発生しました。'))->to_json(), 500, array('Content-Type' => 'application/json'));
          }
     }
     /**
-     * 指定されたIDの予約情報を取得する (GET /api/reservations/:id)
-     * @param int $id 予約ID (URLから取得)
+     * 指定されたIDの予約情報を取得する 
      */
     public function get_reservation($id = null)
     {
@@ -134,7 +128,7 @@ class Controller_Api_Reservations extends Controller_Rest
      * 指定されたIDの予約情報を更新する (POST /api/reservations/update/:id)
      * @param int $id 更新する予約のID (URLから取得)
      */
-    public function post_update($id = null) // ★ POSTで受け取る
+    public function post_update($id = null) 
     {
          // パラメータチェック
         if ($id === null || !ctype_digit((string)$id) || (int)$id <= 0) {
@@ -155,7 +149,6 @@ class Controller_Api_Reservations extends Controller_Rest
         if (strtotime($datetime_str) === false) {
              return \Response::forge(\Format::forge(array('success' => false, 'message' => '日時の形式が無効です。'))->to_json(), 400, array('Content-Type' => 'application/json'));
         }
-        // TODO: 未来の日時かチェック
 
         // Model呼び出し用のデータ準備
         $data_to_update = array(
@@ -173,7 +166,6 @@ class Controller_Api_Reservations extends Controller_Rest
             $response = array(
                 'success' => true,
                 'message' => '予約を更新しました。',
-                // 更新後のデータを返すことも可能 (find_by_idを再実行など)
             );
             return \Response::forge(\Format::forge($response)->to_json(), 200, array('Content-Type' => 'application/json'));
         } else {
@@ -182,9 +174,8 @@ class Controller_Api_Reservations extends Controller_Rest
     }
     /**
      * 指定されたIDの予約ステータスを更新する (POST /api/reservations/:id/status)
-     * @param int $id 更新する予約のID (URLから取得)
      */
-    public function action_update_status($id = null) // POSTでステータスを受け取る想定
+    public function action_update_status($id = null) 
     {
         // IDチェック
         if ($id === null || !ctype_digit((string)$id) || (int)$id <= 0) {
@@ -192,9 +183,9 @@ class Controller_Api_Reservations extends Controller_Rest
         }
         $id = (int)$id;
 
-        // 新しいステータスをPOSTデータから取得 (例: 'status' というキー)
+        // 新しいステータスをPOSTデータから取得
         $new_status = \Input::json('status', null);
-        \Log::debug('Received status update request: ID=' . $id . ' Status=' . print_r($new_status, true)); // ← 配列を文字列化してから出力
+        \Log::debug('Received status update request: ID=' . $id . ' Status=' . print_r($new_status, true)); 
         if ($new_status === null) {
             \Log::warning('ステータスがリクエストボディから取得できませんでした。');
             return \Response::forge(\Format::forge(array('success' => false, 'message' => 'ステータスが指定されていません。'))->to_json(), 400, array('Content-Type' => 'application/json'));

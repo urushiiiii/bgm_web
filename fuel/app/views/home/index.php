@@ -8,15 +8,14 @@
     <div id="upload-status" style="margin-top: 10px;"></div>
 </section>
 
+<?php // DOM操作による動的更新も実装してみたいので、今回初期表示はPHPで行っている ?>
 <section>
     <h3>プレイリスト一覧</h3>
     <ul id="playlist-list" style="margin-top: 10px;">
     <?php if (isset($playlists) && !empty($playlists)): ?>
-        <?php // ★ Controllerから渡されたIDを取得 (0より大きい場合のみ有効とみなす) ★ ?>
         <?php $last_viewed_id = (isset($last_viewed_playlist_id) && $last_viewed_playlist_id > 0) ? $last_viewed_playlist_id : null; ?>
 
         <?php foreach ($playlists as $playlist): ?>
-            <?php // ★ $last_viewed_id が null でない場合のみ比較 ★ ?>
             <li <?php if ($last_viewed_id !== null && $playlist['id'] == $last_viewed_id): ?> style="font-weight: bold;" <?php endif; ?>>
                 <a href="<?php echo Uri::create('playlist/view/' . e($playlist['id'])); ?>">
                     <?php echo e($playlist['name']); ?>
@@ -39,9 +38,8 @@
 
 <section>
     <h3>予約一覧</h3>
-    <button type="button" id="create-reservation-button">新規予約を作成</button> <?php // このボタンの機能は後で実装 ?>
+    <button type="button" id="create-reservation-button">新規予約を作成</button> 
 
-    <?php /* テーブルにID付与 */ ?>
     <table border="1" style="width: 100%; margin-top: 10px;" id="reservations-list-table">
         <thead>
             <tr>
@@ -51,17 +49,14 @@
                 <th>操作</th>
             </tr>
         </thead>
-        <?php /* ↓ tbody に data-bind="foreach: ..." を指定 ↓ */ ?>
         <tbody data-bind="foreach: reservations">
             <tr>
-                <?php /* new Date() を使ってフォーマット */ ?>
                 <td data-bind="text: new Date(reservation_datetime).toLocaleString()"></td>
                 <td data-bind="text: playlist_name"></td>
                 <td data-bind="text: status"></td>
                 <td>
                 <button type="button" class="edit-reservation-button"
                 data-bind="click: $root.startEditReservation, attr: {'data-reservation-id': id}">編集</button>
-                    <?php /* ↓ 削除ボタンに click バインディング追加 ↓ */ ?>
                     <button type="button" class="delete-reservation-button" data-bind="click: $root.deleteReservation, attr: {'data-reservation-id': id}">削除</button>
                 </td>
             </tr>
@@ -70,10 +65,9 @@
     <?php // Knockout.jsでデータがない場合やエラー時の表示 ?>
     <p data-bind="visible: !reservations().length && !loadingReservationsError()">登録されている予約はありません。</p>
     <p data-bind="if: loadingReservationsError" style="color: red;" data-bind="text: 'エラー: ' + loadingReservationsError()"></p>
-    <?php // ↑ ここまで予約一覧テーブル (Knockout.js化) ↑ ?>
 </section>
 
-<?php // --- ↓ 予約作成モーダル用のHTMLを追加 ↓ --- ?>
+<?php // --- 予約作成モーダル用のHTMLを追加 --- ?>
 <div id="reservation-modal" style="display: none; padding: 20px; border: 1px solid #ccc; margin-top: 20px; background-color: #f9f9f9;">
 <h3 data-bind="text: isEditingReservation() ? '再生予約の編集' : '新規再生予約'"></h3>
     <div style="margin-bottom: 10px;">
@@ -84,7 +78,6 @@
                        optionsValue: 'id',
                        value: selectedPlaylistId,
                        optionsCaption: '-- 選択してください --'">
-        <?php /* ↑ Knockoutが自動でoptionを生成するので、中のoptionは不要 */ ?>
     </select>
     </div>
     <div style="margin-bottom: 10px;">
@@ -98,12 +91,11 @@
     </div>
     <div id="reservation-status" style="margin-top: 10px; color: red;"></div> <?php // エラーメッセージ等表示用 ?>
 </div>
-<?php // --- ↑ ここまで追加 ↑ --- ?>
 
 
 <section>
     <h3>再生ログ</h3>
-    <?php // ↓ ここからログ一覧表示 ↓ ?>
+    <?php // ここからログ一覧表示 ?>
     <?php if (isset($logs) && !empty($logs)): ?>
         <table border="1" style="width: 100%; margin-top: 10px;">
             <thead>
@@ -117,19 +109,17 @@
                     <tr>
                         <?php // 日時のフォーマット ?>
                         <td><?php echo e(Date::forge(strtotime($log['created_at']))->format('%Y/%m/%d %H:%M:%S')); ?></td>
-                        <td><?php echo e($log['name']); ?></td> <?php // ModelでJOINして取得した楽曲名 ?>
+                        <td><?php echo e($log['name']); ?></td> 
                     </tr>
                 <?php endforeach; ?>
             </tbody>
         </table>
 
         <div class="pagination-container" style="margin-top: 10px;">
-            <?php // Controllerから $data 配列経由で渡されたHTMLを出力。PHP標準関数でデコード ?>
             <?php echo isset($pagination_links_html) ? html_entity_decode($pagination_links_html) : ''; ?>
         </div>
 
     <?php else: ?>
         <p style="margin-top: 10px;">再生ログはまだありません。</p>
     <?php endif; ?>
-    <?php // ↑ ここまでログ一覧表示 ↑ ?>
 </section>

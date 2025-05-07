@@ -1,10 +1,10 @@
 <?php
 namespace Fuel\Migrations;
-class Init // または Dummy_Migration など、ファイル名に合わせたクラス名
+class Init 
 {
     public function up()
     {
-        // 何もしない (migration テーブル作成は migrate コマンドに任せる)
+        // 何もしない 
     }
     public function down()
     {

@@ -6,11 +6,6 @@ class Model_PlaylistSong extends Model
 {
     /**
      * 指定されたプレイリストに複数の楽曲を追加する
-     * 既に登録されている曲はスキップする
-     *
-     * @param int $playlist_id プレイリストID
-     * @param array $song_ids 追加する楽曲IDの配列
-     * @return array 処理結果 ('success' => bool, 'added_count' => int, 'skipped_count' => int, 'message' => string)
      */
     public static function add_songs($playlist_id, $song_ids)
     {
@@ -20,17 +15,16 @@ class Model_PlaylistSong extends Model
             return array('success' => false, 'message' => '不正なパラメータです。');
         }
         $playlist_id = (int)$playlist_id;
-
         $added_count = 0;
         $skipped_count = 0;
         $errors = array();
 
         foreach ($song_ids as $song_id) {
-            // 各song_idが数値かチェック (より厳密にするなら)
+            // 各song_idが数値かチェック 
             if (!ctype_digit((string)$song_id) || (int)$song_id <= 0) {
                 \Log::warning('不正な楽曲IDが配列に含まれています: ' . $song_id);
-                $skipped_count++; // 不正なIDはスキップ扱い
-                continue; // 次のループへ
+                $skipped_count++; 
+                continue; 
             }
             $song_id = (int)$song_id;
 
@@ -44,9 +38,8 @@ class Model_PlaylistSong extends Model
                             ->get('count');
 
                 if ($count > 0) {
-                    // 既に存在する場合はスキップ
                     $skipped_count++;
-                    continue; // 次のループへ
+                    continue; 
                 }
 
                 // --- 2. 未登録ならINSERT ---
@@ -54,25 +47,23 @@ class Model_PlaylistSong extends Model
                                                     ->set(array(
                                                         'playlist_id' => $playlist_id,
                                                         'song_id' => $song_id,
-                                                        // created_at はDBデフォルト値
                                                     ))
                                                     ->execute();
 
                 if ($rows_affected > 0) {
-                    $added_count++; // 追加成功カウント
+                    $added_count++; 
                 } else {
-                    // INSERTが成功しなかった場合 (通常は考えにくいが)
                     \Log::warning('playlist_songs への INSERT に失敗しましたがDBエラーは発生しませんでした。', array('playlist_id' => $playlist_id, 'song_id' => $song_id));
-                    $skipped_count++; // スキップ扱いにする
+                    $skipped_count++; 
                 }
 
             } catch (\Database_Exception $e) {
-                // 個別のINSERTエラー (万が一UNIQUE制約違反などが発生した場合)
+                // 個別のINSERTエラー 
                 \Log::error('楽曲追加中のDBエラー: ' . $e->getMessage(), array('playlist_id' => $playlist_id, 'song_id' => $song_id));
-                $errors[] = $song_id; // エラーが発生した楽曲IDを記録 (任意)
-                $skipped_count++; // エラーもスキップ扱いにする
+                $errors[] = $song_id; 
+                $skipped_count++; 
             }
-        } // end foreach
+        } 
 
         // --- 3. 最終的な結果を返す ---
         if (empty($errors)) {
@@ -92,15 +83,12 @@ class Model_PlaylistSong extends Model
                 'added_count' => $added_count,
                 'skipped_count' => $skipped_count,
                 'message' => '一部の楽曲追加中にエラーが発生しました。詳細はログを確認してください。',
-                'error_song_ids' => $errors, // エラーIDリスト (任意)
+                'error_song_ids' => $errors, 
             );
         }
     }
     /**
      * 指定されたプレイリストから特定の楽曲を削除する
-     * @param int $playlist_id プレイリストID
-     * @param int $song_id 削除する楽曲ID
-     * @return bool 成功した場合 true、失敗した場合 false
      */
     public static function remove_song($playlist_id, $song_id)
     {
@@ -108,10 +96,9 @@ class Model_PlaylistSong extends Model
             $rows_affected = DB::delete('playlist_songs')
                                 ->where('playlist_id', '=', $playlist_id)
                                 ->where('song_id', '=', $song_id)
-                                ->limit(1) // 念のため
+                                ->limit(1) 
                                 ->execute();
-            // 削除された行があれば成功とみなす (なければ元々なかっただけ)
-            return true; // 厳密には $rows_affected > 0 を返す方が正確かも
+            return true; 
         } catch (\Database_Exception $e) {
             \Log::error('楽曲削除中のDBエラー: ' . $e->getMessage(), array('playlist_id' => $playlist_id, 'song_id' => $song_id));
             return false;

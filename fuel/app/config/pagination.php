@@ -4,13 +4,12 @@
 return array(
     // デフォルト設定
     'default' => array(
-        // 1ページあたりに表示するアイテム数 (Controllerで上書き可能)
-        'per_page'        => 10, // 例として10件に設定 (後で変更可)
+        // 1ページあたりに表示するアイテム数
+        'per_page'        => 10, 
         // 現在のページ番号の前後に表示するページリンクの数
         'num_links'       => 3,
-        // ページ番号がURLのどのセグメントにあるか (例: /home/index/page/2 の場合は 4)
-        // Controller側で指定することが多いので、ここではデフォルトで良いかも
-        'uri_segment'     => 3, // または 'page' のようなクエリ文字列キー
+        // ページ番号がURLのどのセグメントにあるか
+        'uri_segment'     => 3, 
         // ページネーションのHTMLテンプレート設定
         'template' => array(
             'wrapper'                 => '<div class="pagination"><ul>{pagination}</ul></div>', // {pagination} の部分に li が入る
@@ -29,8 +28,5 @@ return array(
             'last'                    => '<li><a href="{uri}">{page}</a></li>',
             'last-marker'             => '&raquo;&raquo;',
         ),
-         // クエリ文字列を使う場合 (例: /home/index?page=2)
-         // 'uri_segment' => 'page', // キー名を指定
-         // 'pagination_url' => \Uri::current(), // 現在のURLを使う設定
     ),
 );

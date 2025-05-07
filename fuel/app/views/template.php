@@ -3,27 +3,10 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title><?php echo isset($title) ? $title : 'BGM App'; ?></title> <?php // Controllerで設定したタイトルを表示 ?>
-
-
-    <?php // --- CSSファイルの読み込み --- ?>
-    <?php // Assetクラスを使うと便利 (例: public/assets/css/style.css を読み込む場合) ?>
-    <?php // echo Asset::css('style.css'); ?>
-    <?php // (もしCSSファイルがまだなければ、この行はコメントアウトしておくか削除) ?>
-
-    <?php // --- JavaScriptファイルの読み込み --- ?>
-    <?php // jQueryやKnockout.js、自作JSファイルを読み込む ?>
-    <?php // 例: public/assets/js/knockout.js や public/assets/js/main.js など ?>
-    <?php // echo Asset::js('knockout-x.y.z.js'); // x.y.zは実際のバージョン ?>
-    <?php // echo Asset::js('main.js'); ?>
-    <?php // (ファイルがまだなければコメントアウトしておくか削除) ?>
-    <?php // まずKnockout.jsライブラリ本体を読み込む (ファイル名はダウンロードしたものに合わせてください) ?>
+    <title><?php echo isset($title) ? e($title) : 'BGM App'; ?></title>
     <?php echo Asset::js('knockout-v3.5.1.js');  ?>
-
-    <?php // 自作のJavaScriptファイル (ViewModelなどを書く) を読み込む ?>
     <?php echo Asset::js('app.js'); ?>
-
-    <?php // --- ↓ 通知バナー表示エリアを追加 ↓ --- ?>
+    <?php // --- 通知バナー表示エリアを追加 --- ?>
     <div id="notification-banner" data-bind="if: currentNotification" style="background-color: lightblue; padding: 10px; text-align: center; border-bottom: 1px solid #ccc;">
         <span>予約時間です！ プレイリスト「<strong data-bind="text: currentNotification().playlist_name"></strong>」</span>
         <button type="button" data-bind="click: playFromNotification">再生</button>
@@ -38,8 +21,6 @@
         <nav>
             <ul>
                 <li><a href="<?php echo Uri::create('home/index'); ?>">ホーム</a></li> <?php // 全体ページへのリンク ?>
-                <li><a href="<?php echo Uri::create('songs/index'); ?>">楽曲一覧</a></li> <?php // 楽曲ページへのリンク (仮) ?>
-                <?php // 他に必要なナビゲーションリンクを追加 ?>
             </ul>
         </nav>
     </header>
@@ -49,7 +30,7 @@
         <?php echo isset($content) ? $content : ''; ?>
     </main>
 
-    <?php // ↓ 再生用のaudio要素を設置 (通常は非表示) ↓ ?>
+    <?php // 再生用のaudio要素を設置 (通常は非表示)  ?>
     <audio id="audio-player" style="display: none;"></audio>
 
     <footer>
@@ -59,17 +40,14 @@
             </button>
             <span style="margin-left: 15px;">再生中:</span>
             <span data-bind="text: currentSong() ? currentSong().name : '---'"></span> <?php // Knockoutの currentSong の name を表示 ?>
-            <?php // --- ↓ 音量調整スライダーを追加 ↓ --- ?>
+            <?php // --- 音量調整スライダーを追加 --- ?>
                 <span style="margin-left: 30px;">音量:</span>
                 <input type="range" id="volume-slider" min="0" max="1" step="0.05"
                         data-bind="value: currentVolume, valueUpdate: 'input'">
-                <span data-bind="text: Math.round(currentVolume() * 100) + '%'"></span> <?php // 現在の音量を%表示 (任意) ?>
+                <span data-bind="text: Math.round(currentVolume() * 100) + '%'"></span> <?php // 現在の音量を%表示 ?>
         </div>
-        <p style="text-align: center; margin-top: 5px;">&copy; <?php echo date('Y'); ?> Your Name or App Name</p> <?php // コピーライトも中央揃えに(例) ?>
+        <p style="text-align: center; margin-top: 5px;">&copy; <?php echo date('Y'); ?> Your Name or App Name</p> 
     </footer>
-
-    <?php // body 閉じタグ直前でJSを読み込む場合 ?>
-    <?php // echo Asset::js('scripts_footer.js'); ?>
 
 </body>
 </html>

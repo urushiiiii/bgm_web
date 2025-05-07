@@ -5,19 +5,19 @@
 class Model_Reservation extends Model
 {
     /**
-     * 全ての予約情報をプレイリスト名付きで取得する (修正: playlist_idも取得)
+     * 全ての予約情報をプレイリスト名付きで取得する 
      */
     public static function find_all_with_playlist_name()
     {
         try {
             $query = DB::select(
                             'reservations.id',
-                            'reservations.playlist_id', // ★ playlist_id を追加 ★
+                            'reservations.playlist_id', 
                             'reservations.reservation_datetime',
                             'reservations.status',
                             array('playlists.name', 'playlist_name'),
                             'reservations.created_at',
-                            'reservations.updated_at' // ★ updated_at を再度追加 ★ (予約編集機能で必要になるはず)
+                            'reservations.updated_at' 
                         )
                         ->from('reservations')
                         ->join('playlists', 'INNER')
@@ -33,9 +33,6 @@ class Model_Reservation extends Model
     }
     /**
      * 新しい再生予約を作成する
-     * @param int $playlist_id プレイリストID
-     * @param string $datetime_str 予約日時文字列 (YYYY-MM-DD HH:MM:SS 形式)
-     * @return mixed 成功時は作成された予約のID、失敗時は false (既に予約がある場合は 'duplicate')
      */
     public static function create_reservation($playlist_id, $datetime_str)
     {
@@ -51,8 +48,6 @@ class Model_Reservation extends Model
             \Log::warning('不正な日時形式です: ' . $datetime_str);
             return false;
         }
-
-        // TODO: 予約日時が過去でないかチェックするロジックを追加しても良い
 
         try {
             // --- 同じ日時に既に予約がないかチェック (DBのUNIQUE制約に頼ることもできる) ---
@@ -72,21 +67,20 @@ class Model_Reservation extends Model
                                                 ->set(array(
                                                     'playlist_id' => $playlist_id,
                                                     'reservation_datetime' => $datetime_str,
-                                                    'status' => 'reserved', // 初期状態
-                                                    // created_at, updated_at はDBデフォルト値
+                                                    'status' => 'reserved', 
                                                 ))
                                                 ->execute();
 
             if ($rows_affected > 0) {
-                return $insert_id; // 成功したら挿入IDを返す
+                return $insert_id; 
             } else {
-                return false; // INSERT失敗 (通常は起こりにくい)
+                return false; 
             }
 
         } catch (\Database_Exception $e) {
-            // DBエラー (UNIQUE制約違反がここで捕捉される可能性もある)
+            // DBエラー 
             \Log::error('データベースエラー[予約作成]: ' . $e->getMessage(), array('playlist_id' => $playlist_id, 'datetime' => $datetime_str));
-            // 重複エラーコード(例: MySQLの1062)か判定して 'duplicate' を返すことも可能
+            // 重複エラーコード
             if (strpos($e->getMessage(), 'Duplicate entry') !== false) {
                  return 'duplicate';
             }
@@ -96,8 +90,6 @@ class Model_Reservation extends Model
 
     /**
      * 指定されたIDの予約を削除する
-     * @param int $id 削除する予約のID
-     * @return bool 成功した場合 true、失敗または該当なしの場合 false
      */
     public static function delete_reservation($id)
     {
@@ -108,10 +100,9 @@ class Model_Reservation extends Model
         $id = (int)$id;
 
         try {
-            // DB::delete を使って reservations テーブルから指定IDのレコードを削除
             $rows_affected = DB::delete('reservations')
                                 ->where('id', '=', $id)
-                                ->limit(1) // IDなので1件のみ対象
+                                ->limit(1) 
                                 ->execute();
 
             return ($rows_affected > 0); // 1件削除できれば成功
@@ -123,8 +114,6 @@ class Model_Reservation extends Model
     }
     /**
      * 指定されたIDの予約情報を1件取得する
-     * @param int $id 取得する予約のID
-     * @return array|null 予約データの連想配列、見つからない場合は null
      */
     public static function find_by_id($id)
     {
@@ -134,11 +123,11 @@ class Model_Reservation extends Model
         $id = (int)$id;
 
         try {
-            $query = DB::select('*') // 今回は全カラム取得 (必要に応じて絞る)
+            $query = DB::select('*') 
                         ->from('reservations')
                         ->where('id', '=', $id)
                         ->limit(1);
-            return $query->execute()->current(); // 結果を連想配列で返す (なければ false が返る想定)
+            return $query->execute()->current(); // 結果を連想配列で返す
         } catch (\Database_Exception $e) {
             \Log::error('データベースエラー[予約取得]: ' . $e->getMessage() . ' Reservation ID: ' . $id);
             return null;
@@ -146,9 +135,6 @@ class Model_Reservation extends Model
     }
     /**
      * 指定されたIDの予約情報を更新する
-     * @param int $id 更新する予約のID
-     * @param array $data 更新するデータ ('playlist_id' => int, 'reservation_datetime' => string)
-     * @return mixed 成功時は true, 日時重複時は 'duplicate', 失敗時は false
      */
     public static function update_reservation($id, $data)
     {
@@ -165,14 +151,13 @@ class Model_Reservation extends Model
             \Log::warning('不正な日時形式です (更新): ' . $datetime_str);
             return false;
         }
-        // TODO: 未来の日時かチェック
 
         try {
             // --- 更新しようとしている日時に、自分以外の予約が存在しないかチェック ---
             $count = DB::select(DB::expr('COUNT(*) as count'))
                         ->from('reservations')
                         ->where('reservation_datetime', '=', $datetime_str)
-                        ->where('id', '!=', $id) // ★ 自分自身は除く ★
+                        ->where('id', '!=', $id) 
                         ->execute()
                         ->get('count');
 
@@ -186,15 +171,9 @@ class Model_Reservation extends Model
                                 ->set(array(
                                     'playlist_id' => $data['playlist_id'],
                                     'reservation_datetime' => $datetime_str,
-                                    // status はここでは変更しない想定 (もし必要なら $data に含める)
-                                    // updated_at はDBの機能で自動更新されるはず
                                 ))
                                 ->where('id', '=', $id)
                                 ->execute();
-
-            // execute() は影響行数を返す (更新されなくても0が返る)
-            // 更新成功したかどうかの判定は難しいが、エラーが出なければOKとするか、
-            // 更新前後のデータを比較するなどが必要。ここではエラーなければ成功とみなす。
             return true; // 例外が出なければ成功扱い
 
         } catch (\Database_Exception $e) {
@@ -207,11 +186,8 @@ class Model_Reservation extends Model
     }
     /**
      * 指定されたIDの予約ステータスを更新する
-     * @param int $id 更新する予約のID
-     * @param string $status 新しいステータス ('played', 'canceled', 'dismissed' など)
-     * @return bool 成功時は true, 失敗時は false
      */
-    public static function update_status($id, $status) // ★★★ このメソッドが存在するか確認 ★★★
+    public static function update_status($id, $status) 
     {
         // パラメータ検証
         if (!ctype_digit((string)$id) || (int)$id <= 0 || empty($status)) {
@@ -219,7 +195,7 @@ class Model_Reservation extends Model
             return false;
         }
         $id = (int)$id;
-        // 有効なステータスかチェック (任意だが推奨)
+        // 有効なステータスかチェック
         $allowed_statuses = ['played', 'canceled', 'dismissed', 'reserved', 'error'];
         if (!in_array($status, $allowed_statuses)) {
              \Log::warning('許可されていないステータスです: ' . $status);
@@ -231,12 +207,9 @@ class Model_Reservation extends Model
             $rows_affected = DB::update('reservations')
                                 ->set(array(
                                     'status' => $status,
-                                    // updated_at はDBで自動更新される
                                 ))
                                 ->where('id', '=', $id)
                                 ->execute();
-
-            // execute() はエラーがなければ影響行数を返す(0の場合もある)ので、ここでは例外が出なければ成功とする
             return true;
 
         } catch (\Database_Exception $e) {

@@ -17,11 +17,8 @@ class Create_playlist_songs
             array('id')
         );
 
-        // 複合ユニークキー制約を追加 (同じ曲が同じプレイリストに重複しないように)
-        // 'uq_playlist_song' はユニークキー制約の名前（任意）
         \DBUtil::create_index('playlist_songs', array('playlist_id', 'song_id'), 'uq_playlist_song', 'UNIQUE');
 
-        // 外部キーカラムにはインデックスを作成しておくのが一般的（DBによっては自動作成される場合もある）
         \DBUtil::create_index('playlist_songs', 'playlist_id');
         \DBUtil::create_index('playlist_songs', 'song_id');
     }
